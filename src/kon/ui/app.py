@@ -202,7 +202,11 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         truncated_description = description[:300]
         if len(description) > 300:
             truncated_description = f"{truncated_description}..."
-        return f"[{skill_name}]\n{truncated_description}\n\nquery: {query}"
+
+        parts = [f"[{skill_name}]", truncated_description]
+        if query.strip():
+            parts.extend(["", "[query]", query.strip()])
+        return "\n".join(parts)
 
     def _create_provider(self, api_type: ApiType, config: ProviderConfig) -> BaseProvider:
         if api_type in _COPILOT_API_TYPES and not is_copilot_logged_in():

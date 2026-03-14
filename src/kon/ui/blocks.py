@@ -209,12 +209,13 @@ class UserBlock(Static):
         text = Text()
         if self._highlighted_skill:
             text.append(self._content)
-            marker = f"[{self._highlighted_skill}]"
-            start = self._content.find(marker)
-            if start != -1:
-                text.stylize(
-                    f"{config.ui.colors.compaction.label} bold", start, start + len(marker)
-                )
+            markers = [f"[{self._highlighted_skill}]", "[query]"]
+            for marker in markers:
+                start = self._content.find(marker)
+                if start != -1:
+                    text.stylize(
+                        f"{config.ui.colors.compaction.label} bold", start, start + len(marker)
+                    )
         else:
             text.append("> ", style="bold")
             text.append(self._content)
