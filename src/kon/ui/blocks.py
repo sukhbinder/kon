@@ -255,8 +255,8 @@ class HandoffLinkBlock(Static):
 
     def compose(self) -> ComposeResult:
         link_text = f"{self._target_session_id[:8]} (click to open)"
-        handoff_line = f"[handoff] {self._label} → {link_text}"
-        text = Text(f"{handoff_line}\n\n[query]\n{self._query}")
+        handoff_line = f"{self._label} → {link_text}"
+        text = Text(f"[handoff]\n{handoff_line}\n\n[query]\n{self._query}")
         for marker in ("[handoff]", "[query]"):
             start = text.plain.find(marker)
             if start != -1:
