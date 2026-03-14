@@ -12,6 +12,7 @@ Structure:
 """
 
 import json
+import re
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -24,6 +25,7 @@ from kon import CONFIG_DIR_NAME
 from .core.types import AssistantMessage, Message, StopReason, TextContent, UserMessage
 
 CURRENT_VERSION = 1
+_SKILL_TRIGGER_HEADER_RE = re.compile(r"^\[([a-z0-9-]+)\]\s*$")
 
 
 def _now_iso() -> str:
@@ -221,6 +223,12 @@ class Session:
                 f.write(self._header.model_dump_json() + "\n")
             for entry in self._entries:
                 f.write(entry.model_dump_json() + "\n")
+
+    def ensure_persisted(self) -> None:
+        if not self._persist or not self._session_file:
+            return
+        self._write_all()
+        self._flushed = True
 
     def append_message(self, message: Message) -> str:
         entry = MessageEntry(
@@ -528,6 +536,33 @@ class Session:
         sessions.sort(key=lambda s: s.modified, reverse=True)
         return sessions
 
+    @staticmethod
+    def _extract_preview_from_user_message(content: str) -> str:
+        text = content.strip()
+        if not text:
+            return ""
+
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        if not lines:
+            return text
+
+        header_match = _SKILL_TRIGGER_HEADER_RE.match(lines[0])
+        if not header_match:
+            return text
+
+        skill_name = header_match.group(1)
+        query_marker_index = next(
+            (i for i, line in enumerate(lines[1:], start=1) if line.lower() == "[query]"), -1
+        )
+        if query_marker_index == -1:
+            return f"/{skill_name}"
+
+        query = " ".join(lines[query_marker_index + 1 :]).strip()
+        if not query:
+            return f"/{skill_name}"
+
+        return f"/{skill_name} {query}"
+
     @classmethod
     def build_session_info(cls, path: Path) -> SessionInfo | None:
         header: SessionHeader | None = None
@@ -553,11 +588,13 @@ class Session:
                     if msg.get("role") == "user" and not first_message:
                         content = msg.get("content", "")
                         if isinstance(content, str):
-                            first_message = content[:100]
+                            first_message = cls._extract_preview_from_user_message(content)[:100]
                         elif isinstance(content, list) and content:
                             first_item = content[0]
                             if isinstance(first_item, dict) and first_item.get("type") == "text":
-                                first_message = first_item.get("text", "")[:100]
+                                first_message = cls._extract_preview_from_user_message(
+                                    first_item.get("text", "")
+                                )[:100]
 
         if not header:
             return None

@@ -59,7 +59,7 @@ from ..session import Session
 from ..tools import DEFAULT_TOOLS, get_tools
 from ..update_check import get_newer_pypi_version
 from .autocomplete import DEFAULT_COMMANDS, FilePathProvider, SlashCommand, SlashCommandProvider
-from .blocks import LaunchWarning
+from .blocks import HandoffLinkBlock, LaunchWarning
 from .chat import ChatLog
 from .commands import CommandsMixin
 from .floating_list import FloatingList
@@ -113,6 +113,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
 
     BINDINGS: ClassVar[list] = [
         ("ctrl+c", "handle_ctrl_c", "Clear"),
+        Binding("ctrl+d", "handle_ctrl_d", "Delete session", priority=True),
         ("escape", "interrupt_agent", "Interrupt"),
         ("ctrl+t", "toggle_thinking", "Toggle thinking"),
         Binding("shift+tab", "cycle_thinking_level", "Cycle thinking level", priority=True),
@@ -145,8 +146,11 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         self._thinking_level = thinking_level or config.llm.default_thinking_level
         self._is_running = False
         self._last_ctrl_c_time = 0.0
+        self._last_ctrl_d_time = 0.0
         self._ctrl_c_threshold = 2.0
+        self._ctrl_d_threshold = 2.0
         self._ctrl_c_timer = None
+        self._ctrl_d_timer = None
         self._cancel_event: asyncio.Event | None = None
         self._interrupt_requested = False
         self._abort_shown = False
@@ -488,6 +492,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         if self._selection_mode is not None:
             self._selection_mode = None
             input_box.set_autocomplete_enabled(True)
+            self._reset_ctrl_d_delete_state()
 
         input_box.set_completing(False)
 
@@ -509,6 +514,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
             self._selection_mode = None
             input_box.set_autocomplete_enabled(True)
             input_box.set_completing(False)
+            self._reset_ctrl_d_delete_state()
 
             match selection_mode:
                 case SelectionMode.SESSION:
@@ -572,6 +578,33 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
                 self._ctrl_c_threshold, lambda: status.hide_exit_hint()
             )
 
+    def action_handle_ctrl_d(self) -> None:
+        if self._selection_mode != SelectionMode.SESSION:
+            return
+
+        completion_list = self.query_one("#completion-list", FloatingList)
+        if not completion_list.is_visible or completion_list.selected_item is None:
+            return
+
+        status = self.query_one("#status-line", StatusLine)
+        now = time.time()
+        if now - self._last_ctrl_d_time < self._ctrl_d_threshold:
+            self._last_ctrl_d_time = 0.0
+            if self._ctrl_d_timer:
+                self._ctrl_d_timer.stop()
+                self._ctrl_d_timer = None
+            status.hide_exit_hint()
+            self._delete_selected_resume_session()
+            return
+
+        self._last_ctrl_d_time = now
+        status.show_delete_session_hint()
+        if self._ctrl_d_timer:
+            self._ctrl_d_timer.stop()
+        self._ctrl_d_timer = self.set_timer(
+            self._ctrl_d_threshold, lambda: status.hide_exit_hint()
+        )
+
     def action_interrupt_agent(self) -> None:
         if self._is_running:
             self._request_interrupt(show_message=True)
@@ -588,6 +621,15 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
 
         if self._cancel_event:
             self._cancel_event.set()
+
+    def _reset_ctrl_d_delete_state(self) -> None:
+        self._last_ctrl_d_time = 0.0
+        if self._ctrl_d_timer:
+            self._ctrl_d_timer.stop()
+            self._ctrl_d_timer = None
+
+        status = self.query_one("#status-line", StatusLine)
+        status.hide_exit_hint()
 
     def action_toggle_thinking(self) -> None:
         self._hide_thinking = not self._hide_thinking
@@ -621,6 +663,13 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         info_bar.set_thinking_level(new_level)
 
         chat.show_status(f"Thinking level: {new_level}")
+
+    @on(HandoffLinkBlock.LinkSelected)
+    def on_handoff_link_selected(self, event: HandoffLinkBlock.LinkSelected) -> None:
+        if not event.target_session_id:
+            return
+        event.stop()
+        self.run_worker(self._load_session_by_id(event.target_session_id), exclusive=True)
 
     @on(InputBox.Submitted)
     def on_input_submitted(self, event: InputBox.Submitted) -> None:

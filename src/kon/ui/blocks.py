@@ -3,9 +3,10 @@ from typing import Literal
 
 from rich.style import Style
 from rich.text import Text
+from textual import events
 from textual.app import ComposeResult
 from textual.message import Message
-from textual.widgets import Label, Markdown, Static
+from textual.widgets import Label, Static
 
 from kon import config
 
@@ -253,23 +254,28 @@ class HandoffLinkBlock(Static):
         self.add_class("handoff-link-block")
 
     def compose(self) -> ComposeResult:
-        markdown_text = (
-            f"**[handoff]** {self._label}\n"
-            f"[Open linked session](kon-session://{self._target_session_id})\n"
-            f"Query: {self._query}"
-        )
-        markdown = Markdown(markdown_text, open_links=False)
-        markdown.add_class("handoff-link-content")
-        yield markdown
+        link_text = f"Open linked session ({self._target_session_id[:8]})"
+        text = Text(f"[handoff]\n{self._label}\n{link_text}\n\n[query]\n{self._query}")
+        for marker in ("[handoff]", "[query]"):
+            start = text.plain.find(marker)
+            if start != -1:
+                text.stylize(f"{config.ui.colors.badge.label} bold", start, start + len(marker))
 
-    def on_markdown_link_clicked(self, event: Markdown.LinkClicked) -> None:
+        link_start = text.plain.find(link_text)
+        if link_start != -1:
+            text.stylize(
+                f"{config.ui.colors.notice} underline", link_start, link_start + len(link_text)
+            )
+
+        yield Label(text)
+
+    def on_click(self, event: events.Click) -> None:
         event.stop()
-        if not event.href.startswith("kon-session://"):
+        if not self._target_session_id:
             return
-        target_session_id = event.href[len("kon-session://") :].strip()
-        if not target_session_id:
-            return
-        self.post_message(self.LinkSelected(self, target_session_id, self._query, self._direction))
+        self.post_message(
+            self.LinkSelected(self, self._target_session_id, self._query, self._direction)
+        )
 
     class LinkSelected(Message):
         def __init__(

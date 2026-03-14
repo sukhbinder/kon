@@ -525,6 +525,24 @@ def test_continue_by_id_unique_prefix_match(tmp_path, monkeypatch):
     assert resumed.id == session.id
 
 
+def test_ensure_persisted_writes_session_without_assistant(tmp_path, monkeypatch):
+    monkeypatch.setattr("kon.session.Session.get_sessions_dir", lambda cwd: tmp_path)
+
+    session = Session.create("/test/project")
+    session.append_custom_message("handoff_backlink", "origin", display=False)
+
+    assert session.session_file is not None
+    assert not session.session_file.exists()
+
+    session.ensure_persisted()
+
+    assert session.session_file.exists()
+    loaded = Session.load(session.session_file)
+    custom_entries = [e for e in loaded.entries if isinstance(e, CustomMessageEntry)]
+    assert len(custom_entries) == 1
+    assert custom_entries[0].custom_type == "handoff_backlink"
+
+
 def test_continue_by_id_not_found(tmp_path, monkeypatch):
     monkeypatch.setattr("kon.session.Session.get_sessions_dir", lambda cwd: tmp_path)
 
@@ -533,3 +551,21 @@ def test_continue_by_id_not_found(tmp_path, monkeypatch):
 
     with pytest.raises(FileNotFoundError):
         Session.continue_by_id("/test/project", "does-not-exist")
+
+
+def test_extract_preview_from_skill_trigger_message():
+    content = "[noc]\nPlanning-only mode for exploration\n\n[query]\nrefactor session listing"
+
+    assert Session._extract_preview_from_user_message(content) == "/noc refactor session listing"
+
+
+def test_extract_preview_from_skill_trigger_without_query():
+    content = "[noc]\nPlanning-only mode for exploration"
+
+    assert Session._extract_preview_from_user_message(content) == "/noc"
+
+
+def test_extract_preview_from_regular_user_message():
+    content = "fix flaky test in resume"
+
+    assert Session._extract_preview_from_user_message(content) == "fix flaky test in resume"

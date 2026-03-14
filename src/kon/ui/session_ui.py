@@ -122,8 +122,27 @@ class SessionUIMixin:
                     chat.set_tool_result(tool_id, result_text, not message.is_error, markup=markup)
             elif isinstance(entry, CompactionEntry):
                 chat.add_compaction_message(entry.tokens_before)
-            elif isinstance(entry, CustomMessageEntry) and entry.display:
-                chat.add_info_message(entry.content)
+            elif isinstance(entry, CustomMessageEntry):
+                target_session_id = str(
+                    (entry.details or {}).get("target_session_id") or ""
+                ).strip()
+                query = str((entry.details or {}).get("query") or "").strip()
+                if entry.custom_type == "handoff_backlink" and target_session_id:
+                    chat.add_handoff_link_message(
+                        label=f"Origin session {target_session_id[:8]}",
+                        target_session_id=target_session_id,
+                        query=query,
+                        direction="back",
+                    )
+                elif entry.custom_type == "handoff_forward_link" and target_session_id:
+                    chat.add_handoff_link_message(
+                        label=f"Handoff session {target_session_id[:8]}",
+                        target_session_id=target_session_id,
+                        query=query,
+                        direction="forward",
+                    )
+                elif entry.display:
+                    chat.add_info_message(entry.content)
 
     @staticmethod
     def _calculate_session_tokens(session: Session) -> tuple[int, int, int, int, int]:
@@ -153,6 +172,26 @@ class SessionUIMixin:
                     )
 
         return input_tokens, output_tokens, context_tokens, cache_read_tokens, cache_write_tokens
+
+    async def _load_session_by_id(self, session_id: str) -> None:
+        chat = self.query_one("#chat-log", ChatLog)
+        input_box = self.query_one("#input-box", InputBox)
+
+        try:
+            session = Session.continue_by_id(self._cwd, session_id)
+        except Exception as exc:
+            chat.add_info_message(f"Failed to load linked session: {exc}", error=True)
+            input_box.focus()
+            return
+
+        if session.session_file is None:
+            chat.add_info_message(
+                "Failed to load linked session: missing session file", error=True
+            )
+            input_box.focus()
+            return
+
+        await self._load_session(session.session_file)
 
     async def _load_session(self, session_path: str | Path) -> None:
         chat = self.query_one("#chat-log", ChatLog)

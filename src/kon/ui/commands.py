@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from kon import config
 
 from ..core.compaction import generate_summary
+from ..core.handoff import generate_handoff_prompt
 from ..core.types import AssistantMessage, ToolCall, ToolResultMessage
 from ..llm import (
     ApiType,
@@ -34,6 +36,9 @@ if TYPE_CHECKING:
 
 
 class CommandsMixin:
+    HANDOFF_BACKLINK_TYPE = "handoff_backlink"
+    HANDOFF_FORWARD_LINK_TYPE = "handoff_forward_link"
+
     # Attributes provided by the App subclass
     _cwd: str
     _thinking_level: str
@@ -44,6 +49,7 @@ class CommandsMixin:
     _session: Session | None
     _agent: Any
     _is_running: bool
+    _selection_mode: Any
 
     # Methods from App - declared for type checking
     if TYPE_CHECKING:
@@ -59,6 +65,7 @@ class CommandsMixin:
         def _get_provider_api_type(self, provider: BaseProvider) -> ApiType: ...
         def _create_provider(self, api_type: ApiType, config: ProviderConfig) -> BaseProvider: ...
         def _sync_slash_commands(self) -> None: ...
+        def _render_session_entries(self, session: Session) -> None: ...
 
     def _handle_command(self, text: str) -> bool:
         parts = text[1:].split(maxsplit=1)
@@ -79,6 +86,9 @@ class CommandsMixin:
             return True
         if cmd == "new":
             self._new_conversation()
+            return True
+        if cmd == "handoff":
+            self._handle_handoff_command(args)
             return True
         if cmd == "resume":
             self._show_resume_sessions()
@@ -113,6 +123,7 @@ class CommandsMixin:
   /compact   - Compact current conversation now
   /model     - Change model (/model gpt-4o)
   /new       - Start new conversation
+  /handoff   - Start focused handoff in new session
   /resume    - Resume a session
   /session   - Show session info and stats
   /login     - Login to a provider
@@ -218,25 +229,7 @@ Keybindings:
         chat.add_info_message(f"Model changed to {model.id} ({model.provider})")
 
     def _new_conversation(self) -> None:
-        selected_model = get_model(self._model, self._model_provider)
-        model_provider = (
-            selected_model.provider
-            if selected_model
-            else (self._provider.name if self._provider else "openai")
-        )
-        self._model_provider = model_provider
-        self._session = Session.create(
-            self._cwd,
-            provider=model_provider,
-            model_id=self._model,
-            thinking_level=self._thinking_level,
-        )
-        model_base_url = (
-            selected_model.base_url
-            if selected_model
-            else (self._provider.config.base_url if self._provider else None)
-        )
-        self._session.append_model_change(model_provider, self._model, model_base_url)
+        self._session = self._create_new_session()
         if self._provider:
             self._provider.config.session_id = self._session.id
 
@@ -247,6 +240,10 @@ Keybindings:
         self.run_worker(self._do_new_conversation(chat, info_bar, status), exclusive=False)
 
     async def _do_new_conversation(self, chat: ChatLog, info_bar, status) -> None:
+        await self._reset_session_ui(chat, info_bar, status)
+        chat.add_info_message("Started new conversation")
+
+    async def _reset_session_ui(self, chat: ChatLog, info_bar, status) -> None:
         await chat.remove_all_children()
 
         status.reset()
@@ -268,7 +265,110 @@ Keybindings:
                 skill_paths=[format_path(s.path) for s in self._agent.context.skills],
             )
 
-        chat.add_info_message("Started new conversation")
+    def _handle_handoff_command(self, args: str) -> None:
+        chat = self.query_one("#chat-log", ChatLog)
+
+        if self._is_running:
+            chat.add_info_message("Cannot handoff while agent is running", error=True)
+            return
+
+        if self._provider is None or self._session is None or self._agent is None:
+            chat.add_info_message("Agent not initialized", error=True)
+            return
+
+        query = args.strip()
+        if not query:
+            chat.add_info_message(
+                "Usage: /handoff <query>. Example: /handoff implement phase two", error=True
+            )
+            return
+
+        if not self._session.all_messages:
+            chat.add_info_message("No conversation to handoff", error=True)
+            return
+
+        chat.show_status("Creating handoff...")
+        self.run_worker(self._do_handoff(query), exclusive=False)
+
+    def _create_new_session(self) -> Session:
+        selected_model = get_model(self._model, self._model_provider)
+        model_provider = (
+            selected_model.provider
+            if selected_model
+            else (self._provider.name if self._provider else "openai")
+        )
+        self._model_provider = model_provider
+        session = Session.create(
+            self._cwd,
+            provider=model_provider,
+            model_id=self._model,
+            thinking_level=self._thinking_level,
+        )
+        model_base_url = (
+            selected_model.base_url
+            if selected_model
+            else (self._provider.config.base_url if self._provider else None)
+        )
+        session.append_model_change(model_provider, self._model, model_base_url)
+        return session
+
+    async def _do_handoff(self, query: str) -> None:
+        chat = self.query_one("#chat-log", ChatLog)
+        info_bar = self.query_one("#info-bar", InfoBar)
+        status = self.query_one("#status-line", StatusLine)
+        input_box = self.query_one("#input-box", InputBox)
+
+        if self._provider is None or self._session is None or self._agent is None:
+            chat.add_info_message("Agent not initialized", error=True)
+            return
+
+        source_session = self._session
+
+        try:
+            prompt = await generate_handoff_prompt(
+                source_session.all_messages,
+                self._provider,
+                system_prompt=self._agent.system_prompt,
+                query=query,
+            )
+        except Exception as e:
+            chat.show_status("Handoff failed")
+            chat.add_info_message(f"Handoff failed: {e}", error=True)
+            return
+
+        source_session_id = source_session.id
+        new_session = self._create_new_session()
+
+        new_session.append_custom_message(
+            self.HANDOFF_BACKLINK_TYPE,
+            f"Handoff from {source_session_id[:8]}",
+            display=False,
+            details={"target_session_id": source_session_id, "query": query},
+        )
+        source_session.append_custom_message(
+            self.HANDOFF_FORWARD_LINK_TYPE,
+            f"Handoff to {new_session.id[:8]}",
+            display=False,
+            details={"target_session_id": new_session.id, "query": query},
+        )
+
+        new_session.ensure_persisted()
+        source_session.ensure_persisted()
+
+        self._session = new_session
+        if self._provider:
+            self._provider.config.session_id = self._session.id
+        if self._agent is not None:
+            self._agent.session = self._session
+
+        await self._reset_session_ui(chat, info_bar, status)
+        self._render_session_entries(self._session)
+        chat.add_info_message(f"Started handoff from {source_session_id[:8]}")
+
+        input_box.clear()
+        input_box.insert(prompt)
+        chat.show_status("Handoff ready")
+        input_box.focus()
 
     def _show_session_info(self) -> None:
         chat = self.query_one("#chat-log", ChatLog)
@@ -345,19 +445,22 @@ Keybindings:
         chat = self.query_one("#chat-log", ChatLog)
         chat.add_info_message("\n".join(lines))
 
-    def _show_resume_sessions(self) -> None:
+    def _build_resume_items(self) -> list[ListItem]:
         sessions = Session.list(self._cwd)
-        if not sessions:
-            self.notify(
-                "No saved sessions found", title="Sessions", timeout=3, severity="information"
-            )
-            return
-
         items: list[ListItem] = []
         for session in sessions:
             label = self._format_session_label(session.first_message)
             caption = f"{self._format_session_age(session.modified)} {session.message_count}"
             items.append(ListItem(value=session, label=label, description=caption))
+        return items
+
+    def _show_resume_sessions(self) -> None:
+        items = self._build_resume_items()
+        if not items:
+            self.notify(
+                "No saved sessions found", title="Sessions", timeout=3, severity="information"
+            )
+            return
 
         completion_list = self.query_one("#completion-list", FloatingList)
         completion_list.show(items)
@@ -368,6 +471,56 @@ Keybindings:
         input_box.set_completing(True)
         input_box.focus()
         self._selection_mode = SelectionMode.SESSION
+
+    def _delete_selected_resume_session(self) -> None:
+        if self._selection_mode != SelectionMode.SESSION:
+            return
+
+        completion_list = self.query_one("#completion-list", FloatingList)
+        selected_item = completion_list.selected_item
+        if selected_item is None:
+            return
+
+        session_info = selected_item.value
+        session_path = Path(session_info.path)
+
+        current_session_path: Path | None = None
+        if self._session and self._session.session_file is not None:
+            current_session_path = Path(self._session.session_file)
+
+        if current_session_path is not None and session_path == current_session_path:
+            self.notify(
+                "Cannot delete current session", title="Sessions", timeout=2, severity="warning"
+            )
+            return
+
+        try:
+            session_path.unlink()
+        except FileNotFoundError:
+            pass
+        except Exception as exc:
+            self.notify(
+                f"Failed to delete session: {exc}", title="Sessions", timeout=3, severity="error"
+            )
+            return
+
+        items = self._build_resume_items()
+        if not items:
+            completion_list.hide()
+            input_box = self.query_one("#input-box", InputBox)
+            input_box.set_autocomplete_enabled(True)
+            input_box.set_completing(False)
+            self._selection_mode = None
+            self.notify(
+                "Session deleted (no saved sessions left)",
+                title="Sessions",
+                timeout=2,
+                severity="information",
+            )
+            return
+
+        completion_list.update_items(items)
+        self.notify("Session deleted", title="Sessions", timeout=2, severity="information")
 
     def _handle_login_command(self, args: str) -> None:
         providers = [

@@ -119,6 +119,7 @@ class SlashCommand:
     description: str
     shortcut: str | None = None
     is_skill: bool = False
+    submit_on_select: bool = True
 
 
 class SlashCommandProvider(AutocompleteProvider):
@@ -363,6 +364,7 @@ DEFAULT_COMMANDS = [
     SlashCommand("clear", "Clear conversation history"),
     SlashCommand("model", "Change model"),
     SlashCommand("new", "Start new conversation"),
+    SlashCommand("handoff", "Start focused handoff in new session", submit_on_select=False),
     SlashCommand("resume", "Resume a session"),
     SlashCommand("session", "Show session info and stats"),
     SlashCommand("login", "Login to a provider"),

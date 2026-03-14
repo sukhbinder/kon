@@ -435,11 +435,25 @@ class InputBox(Vertical):
         self._is_completing = False
         self._active_provider = None
 
-        if not cmd.is_skill:
+        if cmd.submit_on_select and not cmd.is_skill:
             self._completion_prefix = ""
             self._suppress_autocomplete = 1  # clear() = 1 event
             self.clear(reset_pastes=True)
             self.post_message(self.Submitted(f"/{cmd.name}"))
+            return
+
+        if not cmd.is_skill:
+            prefix = self._completion_prefix
+            self._completion_prefix = ""
+
+            textarea = self.query_one("#input-textarea", TextArea)
+            text = textarea.text
+            cursor_col = self._cursor_offset(text, textarea.selection.end)
+            new_text, _ = self._slash_provider.apply_completion(text, cursor_col, item, prefix)
+
+            self._suppress_autocomplete = 2  # clear() + insert() = 2 events
+            textarea.clear()
+            textarea.insert(new_text)
             return
 
         prefix = self._completion_prefix
