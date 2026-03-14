@@ -48,6 +48,7 @@ Screen {{
 .content-block Label,
 .user-block Label,
 .update-available-block Label,
+.launch-warnings-block Label,
 .tool-block Label {{
     width: 100%;
 }}
@@ -66,6 +67,14 @@ Screen {{
 
 /* Update available message */
 .update-available-block {{
+    padding: 0 1;
+    margin: 1 0 0 0;
+    border-top: solid yellow;
+    border-bottom: solid yellow;
+}}
+
+/* Launch warnings */
+.launch-warnings-block {{
     padding: 0 1;
     margin: 1 0 0 0;
     border-top: solid yellow;

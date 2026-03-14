@@ -11,6 +11,7 @@ class FakeChat:
         self.errors: list[str] = []
         self.infos: list[str] = []
         self.warnings: list[str] = []
+        self.launch_warnings: list[object] = []
         self.statuses: list[str] = []
         self.versions: list[str] = []
         self.changelog_urls: list[str | None] = []
@@ -31,6 +32,9 @@ class FakeChat:
     ) -> None:
         self.versions.append(latest_version)
         self.changelog_urls.append(changelog_url)
+
+    def add_launch_warnings(self, warnings) -> None:
+        self.launch_warnings.extend(warnings)
 
     def show_status(self, message: str) -> None:
         self.statuses.append(message)

@@ -1,3 +1,6 @@
+from dataclasses import dataclass
+from typing import Literal
+
 from rich.style import Style
 from rich.text import Text
 from textual.app import ComposeResult
@@ -8,6 +11,12 @@ from kon import config
 from .formatting import format_markdown
 
 _UPDATE_COMMAND = "uv tool upgrade kon-coding-agent"
+
+
+@dataclass(frozen=True)
+class LaunchWarning:
+    message: str
+    severity: Literal["warning", "error"] = "warning"
 
 
 class ThinkingBlock(Static):
@@ -249,5 +258,31 @@ class UpdateAvailableBlock(Static):
             text.append("\n", style=dim_color)
             text.append("Changelog: ", style=dim_color)
             text.append(self._changelog_url, style=accent_color)
+
+        yield Label(text)
+
+
+class LaunchWarningsBlock(Static):
+    ALLOW_SELECT = True
+    can_focus = False
+
+    def __init__(self, warnings: list[LaunchWarning], **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._warnings = warnings
+        self.add_class("launch-warnings-block")
+
+    def compose(self) -> ComposeResult:
+        notice_color = config.ui.colors.notice
+        error_color = config.ui.colors.error
+        dim_color = config.ui.colors.dim
+
+        text = Text()
+        text.append("Launch Warnings", style=f"{notice_color} bold")
+
+        for warning in self._warnings:
+            bullet = "\n✗ " if warning.severity == "error" else "\n! "
+            style = error_color if warning.severity == "error" else dim_color
+            text.append(bullet, style=style)
+            text.append(warning.message, style=style)
 
         yield Label(text)

@@ -8,7 +8,7 @@ import tomllib
 from collections import deque
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 from rich.console import Console
 from textual import events, on
@@ -59,6 +59,7 @@ from ..session import Session
 from ..tools import DEFAULT_TOOLS, get_tools
 from ..update_check import get_newer_pypi_version
 from .autocomplete import DEFAULT_COMMANDS, FilePathProvider, SlashCommand, SlashCommandProvider
+from .blocks import LaunchWarning
 from .chat import ChatLog
 from .commands import CommandsMixin
 from .floating_list import FloatingList
@@ -164,6 +165,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         self._pending_update_notice_version: str | None = None
         self._update_notice_shown = False
         self._startup_complete = False
+        self._launch_warnings: list[LaunchWarning] = []
 
     def compose(self) -> ComposeResult:
         yield ChatLog(id="chat-log")
@@ -247,9 +249,10 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         if self._resume_session:
             try:
                 self._session = Session.continue_by_id(self._cwd, self._resume_session)
-            except (FileNotFoundError, ValueError) as e:
+            except Exception as e:
+                self._add_launch_warning(str(e), severity="error")
                 chat = self.query_one("#chat-log", ChatLog)
-                chat.add_info_message(str(e), error=True)
+                self._flush_launch_warnings(chat)
                 return
             if self._session.entries:
                 model_info = self._session.model
@@ -260,7 +263,13 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
                         self._base_url = session_base_url
                 self._thinking_level = self._session.thinking_level
         elif self._continue_recent:
-            self._session = Session.continue_recent(self._cwd)
+            try:
+                self._session = Session.continue_recent(self._cwd)
+            except Exception as e:
+                self._add_launch_warning(str(e), severity="error")
+                chat = self.query_one("#chat-log", ChatLog)
+                self._flush_launch_warnings(chat)
+                return
             if self._session.entries:
                 model_info = self._session.model
                 if model_info:
@@ -278,8 +287,9 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
             try:
                 api_type = resolve_provider_api_type(self._model_provider)
             except ValueError as e:
+                self._add_launch_warning(str(e), severity="error")
                 chat = self.query_one("#chat-log", ChatLog)
-                chat.add_info_message(str(e), error=True)
+                self._flush_launch_warnings(chat)
                 return
             base_url = self._base_url or _default_base_url_for_api(api_type)
 
@@ -338,17 +348,20 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         chat.add_session_info(VERSION)
 
         if self._agent:
-            # TODO: Surface self._agent.context.skill_warnings in UI
             chat.add_loaded_resources(
                 context_paths=[format_path(f.path) for f in self._agent.context.agents_files],
                 skill_paths=[format_path(s.path) for s in self._agent.context.skills],
             )
+            for path, message in self._agent.context.skill_warnings:
+                self._add_launch_warning(f"Skill warning in {format_path(path)}: {message}")
 
         if provider_error:
-            chat.add_info_message(provider_error, error=True)
+            self._add_launch_warning(provider_error, severity="error")
 
         for warning in consume_config_warnings():
-            chat.add_info_message(warning, warning=True)
+            self._add_launch_warning(warning)
+
+        self._flush_launch_warnings(chat)
 
         info_bar = self.query_one("#info-bar", InfoBar)
         if self._session:
@@ -438,6 +451,18 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         )
         self._update_notice_shown = True
         self._pending_update_notice_version = None
+
+    def _add_launch_warning(
+        self, message: str, *, severity: Literal["warning", "error"] = "warning"
+    ) -> None:
+        cleaned = message.strip()
+        if not cleaned:
+            return
+        self._launch_warnings.append(LaunchWarning(message=cleaned, severity=severity))
+
+    def _flush_launch_warnings(self, chat: ChatLog) -> None:
+        if self._launch_warnings:
+            chat.add_launch_warnings(self._launch_warnings)
 
     # -------------------------------------------------------------------------
     # Completion message handlers

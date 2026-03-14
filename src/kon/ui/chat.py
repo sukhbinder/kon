@@ -4,7 +4,15 @@ from textual.widgets import Label
 
 from kon import config
 
-from .blocks import ContentBlock, ThinkingBlock, ToolBlock, UpdateAvailableBlock, UserBlock
+from .blocks import (
+    ContentBlock,
+    LaunchWarning,
+    LaunchWarningsBlock,
+    ThinkingBlock,
+    ToolBlock,
+    UpdateAvailableBlock,
+    UserBlock,
+)
 
 MAX_CHILDREN = 300
 PRUNE_TO = 200
@@ -145,6 +153,12 @@ class ChatLog(VerticalScroll):
         label.add_class("info-message")
         label.add_class("loaded-resources")
         self.mount(label)
+
+    def add_launch_warnings(self, warnings: list[LaunchWarning]) -> None:
+        if not warnings:
+            return
+        self.mount(LaunchWarningsBlock(warnings))
+        self._scroll_if_anchored(animate=False)
 
     def add_user_message(self, content: str, highlighted_skill: str | None = None) -> UserBlock:
         block = UserBlock(content, highlighted_skill=highlighted_skill)
