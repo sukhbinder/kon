@@ -81,11 +81,12 @@ def _get_package_name() -> str:
 
 
 _PYPI_PACKAGE_NAME = _get_package_name()
+_CHANGELOG_URL = "https://github.com/0xku/kon/blob/main/CHANGELOG.md"
 
 try:
     VERSION = version(_PYPI_PACKAGE_NAME)
 except PackageNotFoundError:
-    VERSION = "0.2.5"
+    VERSION = "0.2.6"
 
 _COPILOT_API_TYPES: frozenset[ApiType] = frozenset(
     {ApiType.GITHUB_COPILOT, ApiType.GITHUB_COPILOT_RESPONSES, ApiType.ANTHROPIC_COPILOT}
@@ -432,7 +433,9 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
             return
 
         chat = self.query_one("#chat-log", ChatLog)
-        chat.add_update_available_message(self._pending_update_notice_version)
+        chat.add_update_available_message(
+            self._pending_update_notice_version, changelog_url=_CHANGELOG_URL
+        )
         self._update_notice_shown = True
         self._pending_update_notice_version = None
 

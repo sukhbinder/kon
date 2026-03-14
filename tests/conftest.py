@@ -13,6 +13,7 @@ class FakeChat:
         self.warnings: list[str] = []
         self.statuses: list[str] = []
         self.versions: list[str] = []
+        self.changelog_urls: list[str | None] = []
 
     def add_compaction_message(self, tokens_before: int) -> None:
         self.compaction_tokens = tokens_before
@@ -25,8 +26,11 @@ class FakeChat:
         else:
             self.infos.append(message)
 
-    def add_update_available_message(self, latest_version: str) -> None:
+    def add_update_available_message(
+        self, latest_version: str, changelog_url: str | None = None
+    ) -> None:
         self.versions.append(latest_version)
+        self.changelog_urls.append(changelog_url)
 
     def show_status(self, message: str) -> None:
         self.statuses.append(message)

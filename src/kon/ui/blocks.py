@@ -227,9 +227,10 @@ class UpdateAvailableBlock(Static):
     ALLOW_SELECT = True
     can_focus = False
 
-    def __init__(self, latest_version: str, **kwargs) -> None:
+    def __init__(self, latest_version: str, changelog_url: str | None = None, **kwargs) -> None:
         super().__init__(**kwargs)
         self._latest_version = latest_version
+        self._changelog_url = changelog_url
         self.add_class("update-available-block")
 
     def compose(self) -> ComposeResult:
@@ -243,4 +244,10 @@ class UpdateAvailableBlock(Static):
         text.append(f"New version {self._latest_version} is available. ", style=dim_color)
         text.append("Run: ", style=dim_color)
         text.append(_UPDATE_COMMAND, style=accent_color)
+
+        if self._changelog_url:
+            text.append("\n", style=dim_color)
+            text.append("Changelog: ", style=dim_color)
+            text.append(self._changelog_url, style=accent_color)
+
         yield Label(text)

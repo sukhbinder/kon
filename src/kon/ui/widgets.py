@@ -208,7 +208,7 @@ class StatusLine(Horizontal):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._status = "idle"
-        self._spinner = Spinner("layer")
+        self._spinner = Spinner("dots")
         self._timer = None
         self._start_time: float | None = None
         self._tool_calls = 0

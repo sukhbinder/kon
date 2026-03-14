@@ -160,12 +160,29 @@ Each skill has a `SKILL.md` file with front matter:
 ---
 name: my-skill
 description: Brief description of what this skill does
+register_cmd: true
+cmd_info: Quick action shown in slash menu
 ---
 
 # My Skill
 
 Detailed instructions for the agent...
 ```
+
+Front matter fields:
+
+- `name` (optional) – Skill identifier. If omitted, Kon uses the directory name.
+- `description` (required) – Used for skill discovery and shown in the prompt context.
+- `register_cmd` (optional, default `false`) – If `true`, the skill is available as a slash command (`/my-skill`) in the input menu.
+- `cmd_info` (optional) – Short menu hint shown for slash-command skills.
+
+Validation rules:
+
+- `name` must be lowercase `a-z`, `0-9`, and `-`
+- `name` must not start/end with `-` or include `--`
+- `name` max length: 64 chars
+- `description` max length: 1024 chars
+- `cmd_info` max length: 32 chars
 
 For skills with scripts, see [Agent Skills Documentation](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview).
 

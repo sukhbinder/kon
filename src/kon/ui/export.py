@@ -210,7 +210,7 @@ def _print_conversation(console: Console, session: Session, tools: list[BaseTool
                         console.print()
                     elif isinstance(part, ThinkingContent) and part.thinking:
                         # Same as ThinkingBlock styling
-                        console.print(Text(part.thinking, style=f"italic {dim}"))
+                        console.print(Text(part.thinking, style=dim))
                         console.print()
                     elif isinstance(part, ToolCall):
                         # Same as ToolBlock._format_header

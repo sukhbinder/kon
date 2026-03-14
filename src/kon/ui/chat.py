@@ -101,17 +101,18 @@ class ChatLog(VerticalScroll):
             return
 
         dim_color = config.ui.colors.dim
+        notice_color = config.ui.colors.notice
         text = Text()
 
         if context_paths:
-            text.append("Loaded context:\n", style=dim_color)
+            text.append("[Context]\n", style=notice_color)
             for path in context_paths:
                 text.append(f"  {path}\n", style=dim_color)
 
         if skill_paths:
             if context_paths:
                 text.append("\n")
-            text.append("Loaded skills:\n", style=dim_color)
+            text.append("[Skills]\n", style=notice_color)
             for path in skill_paths:
                 text.append(f"  {path}\n", style=dim_color)
 
@@ -130,8 +131,10 @@ class ChatLog(VerticalScroll):
         self._prune_if_needed()
         return block
 
-    def add_update_available_message(self, latest_version: str) -> UpdateAvailableBlock:
-        block = UpdateAvailableBlock(latest_version)
+    def add_update_available_message(
+        self, latest_version: str, changelog_url: str | None = None
+    ) -> UpdateAvailableBlock:
+        block = UpdateAvailableBlock(latest_version, changelog_url=changelog_url)
         self.mount(block)
         self._scroll_if_anchored(animate=False)
         self._prune_if_needed()

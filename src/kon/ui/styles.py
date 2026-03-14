@@ -20,9 +20,8 @@ Screen {{
     align-vertical: bottom;
 }}
 
-/* Thinking block - italic, hidden by default */
+/* Thinking block - dim, hidden by default */
 .thinking-block {{
-    text-style: italic;
     color: {colors.dim};
     padding: 0 1;
     margin-top: 1;
@@ -35,7 +34,6 @@ Screen {{
 }}
 
 #thinking-content {{
-    text-style: italic;
     color: {colors.dim};
 }}
 
