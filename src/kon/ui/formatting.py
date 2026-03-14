@@ -1,3 +1,4 @@
+import re
 import shutil
 from typing import ClassVar
 
@@ -96,8 +97,33 @@ class CustomMarkdown(Markdown):
     }
 
 
+def _strip_inline_code_ticks_in_headings(text: str) -> str:
+    lines = text.splitlines(keepends=True)
+    in_fence = False
+    processed: list[str] = []
+
+    for line in lines:
+        stripped = line.lstrip()
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            processed.append(line)
+            continue
+
+        if in_fence:
+            processed.append(line)
+            continue
+
+        if re.match(r"^\s{0,3}#{1,6}\s+", line):
+            line = re.sub(r"`([^`]+)`", r"\1", line)
+
+        processed.append(line)
+
+    return "".join(processed)
+
+
 def format_markdown(text: str, width: int | None = None) -> Text:
-    md = CustomMarkdown(text)
+    sanitized = _strip_inline_code_ticks_in_headings(text)
+    md = CustomMarkdown(sanitized)
     if width is None:
         term_width = shutil.get_terminal_size().columns
         width = max(40, term_width - 4)
