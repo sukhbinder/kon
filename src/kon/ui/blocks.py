@@ -214,7 +214,7 @@ class UserBlock(Static):
                 start = self._content.find(marker)
                 if start != -1:
                     text.stylize(
-                        f"{config.ui.colors.compaction.label} bold", start, start + len(marker)
+                        f"{config.ui.colors.badge.label} bold", start, start + len(marker)
                     )
         else:
             text.append("> ", style="bold")
@@ -233,12 +233,12 @@ class UpdateAvailableBlock(Static):
         self.add_class("update-available-block")
 
     def compose(self) -> ComposeResult:
-        warning_color = config.ui.colors.warning
+        notice_color = config.ui.colors.notice
         dim_color = config.ui.colors.dim
         accent_color = config.ui.colors.accent
 
         text = Text()
-        text.append("Update Available", style=f"{warning_color} bold")
+        text.append("Update Available", style=f"{notice_color} bold")
         text.append("\n", style=dim_color)
         text.append(f"New version {self._latest_version} is available. ", style=dim_color)
         text.append("Run: ", style=dim_color)

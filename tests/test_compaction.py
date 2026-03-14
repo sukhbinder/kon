@@ -442,7 +442,18 @@ class TestCompactionConfig:
         assert cfg.compaction.buffer_tokens == 10_000
         assert cfg.agent.default_context_window == 200_000
 
-    def test_compaction_colors_default(self):
+    def test_badge_colors_default(self):
         cfg = Config({})
-        assert cfg.ui.colors.compaction.bg == "#2d2838"
-        assert cfg.ui.colors.compaction.label == "#9575cd"
+        assert cfg.ui.colors.info == "#ffff00"
+        assert cfg.ui.colors.notice == "#e5c07b"
+        assert cfg.ui.colors.badge.bg == "#2d2838"
+        assert cfg.ui.colors.badge.label == "#9575cd"
+
+    def test_compaction_colors_legacy_alias_still_supported(self):
+        cfg = Config({"ui": {"colors": {"compaction": {"bg": "#111111", "label": "#222222"}}}})
+        assert cfg.ui.colors.badge.bg == "#111111"
+        assert cfg.ui.colors.badge.label == "#222222"
+
+    def test_notice_color_legacy_warning_alias_still_supported(self):
+        cfg = Config({"ui": {"colors": {"warning": "#ffaa00"}}})
+        assert cfg.ui.colors.notice == "#ffaa00"

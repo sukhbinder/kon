@@ -30,7 +30,7 @@ class ToolBgConfig(BaseModel):
     error: str
 
 
-class CompactionBgConfig(BaseModel):
+class BadgeColorConfig(BaseModel):
     bg: str
     label: str
 
@@ -40,14 +40,15 @@ class ColorsConfig(BaseModel):
     title: str
     spinner: str
     accent: str
+    info: str
     markdown_code: str
     selected: str
     error: str
-    warning: str
+    notice: str
     diff_added: str
     diff_removed: str
     tool_bg: ToolBgConfig
-    compaction: CompactionBgConfig
+    badge: BadgeColorConfig
 
 
 class UIConfig(BaseModel):
@@ -118,7 +119,14 @@ class Config:
 
     @staticmethod
     def merge_with_defaults(data: dict[str, Any]) -> dict[str, Any]:
-        return Config.deep_merge(_DEFAULT_CONFIG_DATA, data)
+        normalized_data = deepcopy(data)
+        ui_colors = normalized_data.get("ui", {}).get("colors")
+        if isinstance(ui_colors, dict):
+            if "badge" not in ui_colors and isinstance(ui_colors.get("compaction"), dict):
+                ui_colors["badge"] = deepcopy(ui_colors["compaction"])
+            if "notice" not in ui_colors and isinstance(ui_colors.get("warning"), str):
+                ui_colors["notice"] = ui_colors["warning"]
+        return Config.deep_merge(_DEFAULT_CONFIG_DATA, normalized_data)
 
     @property
     def llm(self) -> LLMConfig:

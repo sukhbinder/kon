@@ -17,7 +17,8 @@ You help users by reading, searching, executing commands, editing code, and writ
 - Use bash for terminal operations (git, package managers, builds, tests, running scripts)
 - When summarizing your actions, output plain text directly DO NOT use cat or bash to display
 - Be concise in your responses
-- Show file paths clearly when working with files"""
+- Show file paths clearly when working with files
+- Kon session logs are JSONL files in ~/.kon/sessions; if the user references recent sessions or a particular session, look there."""
 
 [compaction]
 on_overflow = "continue" # "continue" or "pause"
@@ -32,10 +33,11 @@ dim = "#888888"
 title = "#d97706"
 spinner = "#d97706"
 accent = "#8ABEB7"
+info = "#ffff00"
 markdown_code = "#689d6a"
 selected = "#689d6a"
 error = "#e06c75"
-warning = "#e5c07b"
+notice = "#e5c07b"
 diff_added = "#b5bd68"
 diff_removed = "#cc6666"
 
@@ -44,6 +46,6 @@ pending = "#282832"
 success = "#283228"
 error = "#3c2828"
 
-[ui.colors.compaction]
+[ui.colors.badge]
 bg = "#2d2838"
 label = "#9575cd"

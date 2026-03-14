@@ -72,8 +72,8 @@ class ChatLog(VerticalScroll):
         return children[-1] is self._last_status_label
 
     def show_status(self, message: str) -> None:
-        dim_color = config.ui.colors.dim
-        text = Text(message, style=dim_color)
+        info_color = config.ui.colors.info
+        text = Text(f"✓ {message}", style=info_color)
 
         # If our tracked status label is still the last child, update it
         if self._is_last_child_status() and self._last_status_label is not None:
@@ -206,7 +206,7 @@ class ChatLog(VerticalScroll):
             self._last_status_label.remove()
             self._last_status_label = None
 
-        label_color = config.ui.colors.compaction.label
+        label_color = config.ui.colors.badge.label
         dim_color = config.ui.colors.dim
         token_str = f"{tokens_before:,}"
 
@@ -228,17 +228,20 @@ class ChatLog(VerticalScroll):
         self._scroll_if_anchored(animate=False)
 
     def add_info_message(self, message: str, error: bool = False, warning: bool = False) -> None:
-        dim_color = config.ui.colors.dim
+        info_color = config.ui.colors.info
         error_color = config.ui.colors.error
-        warning_color = config.ui.colors.warning
+        notice_color = config.ui.colors.notice
 
-        style = dim_color
+        style = info_color
+        prefix = "✓ "
         if warning:
-            style = warning_color
+            style = notice_color
+            prefix = "! "
         if error:
             style = error_color
+            prefix = "✗ "
 
-        text = Text(message, style=style)
+        text = Text(f"{prefix}{message}", style=style)
         label = Label(text)
         label.add_class("info-message")
         self.mount(label)

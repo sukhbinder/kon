@@ -63,7 +63,7 @@ Screen {{
 }}
 
 .user-block.skill-trigger-message {{
-    background: {colors.compaction.bg};
+    background: {colors.badge.bg};
 }}
 
 /* Update available message */
@@ -106,7 +106,7 @@ Screen {{
 
 /* Compaction message */
 .compaction-message {{
-    background: {colors.compaction.bg};
+    background: {colors.badge.bg};
     padding: 1 1;
     margin-top: 1;
     width: 100%;
