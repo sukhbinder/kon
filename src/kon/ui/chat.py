@@ -123,8 +123,8 @@ class ChatLog(VerticalScroll):
         label.add_class("loaded-resources")
         self.mount(label)
 
-    def add_user_message(self, content: str) -> UserBlock:
-        block = UserBlock(content)
+    def add_user_message(self, content: str, highlighted_skill: str | None = None) -> UserBlock:
+        block = UserBlock(content, highlighted_skill=highlighted_skill)
         self.mount(block)
         self._scroll_if_anchored(animate=False)
         self._prune_if_needed()

@@ -118,6 +118,7 @@ class SlashCommand:
     name: str
     description: str
     shortcut: str | None = None
+    is_skill: bool = False
 
 
 class SlashCommandProvider(AutocompleteProvider):
@@ -137,26 +138,50 @@ class SlashCommandProvider(AutocompleteProvider):
     def trigger_chars(self) -> set[str]:
         return {"/"}
 
-    def should_trigger(self, text: str, cursor_col: int) -> bool:
-        # Only trigger at start of line with /
+    def _extract_token(self, text: str, cursor_col: int) -> tuple[str, int, bool] | None:
         text_before = text[:cursor_col]
-        stripped = text_before.lstrip()
-        return stripped.startswith("/") and " " not in stripped
+        slash_pos = text_before.rfind("/")
+        if slash_pos == -1:
+            return None
+
+        if slash_pos > 0 and not text_before[slash_pos - 1].isspace():
+            return None
+
+        token = text_before[slash_pos:]
+        if " " in token or "\n" in token or not token.startswith("/"):
+            return None
+
+        is_start_command = not text_before[:slash_pos].strip()
+        return token, slash_pos, is_start_command
+
+    def _available_commands(self, is_start_command: bool) -> list[SlashCommand]:
+        if is_start_command:
+            return self._commands
+        return [cmd for cmd in self._commands if cmd.is_skill]
+
+    def should_trigger(self, text: str, cursor_col: int) -> bool:
+        extracted = self._extract_token(text, cursor_col)
+        if extracted is None:
+            return False
+        _, _, is_start_command = extracted
+        return bool(self._available_commands(is_start_command))
 
     def get_suggestions(self, text: str, cursor_col: int) -> CompletionResult | None:
-        text_before = text[:cursor_col]
-        stripped = text_before.lstrip()
+        extracted = self._extract_token(text, cursor_col)
+        if extracted is None:
+            return None
 
-        if not stripped.startswith("/"):
+        token, prefix_start, is_start_command = extracted
+        available_commands = self._available_commands(is_start_command)
+        if not available_commands:
             return None
 
         # Extract the command prefix (without the /)
-        query = stripped[1:]
-        prefix_start = cursor_col - len(stripped)
+        query = token[1:]
 
         # Filter and score commands
         scored = []
-        for cmd in self._commands:
+        for cmd in available_commands:
             score, _ = self._matcher.match(query, cmd.name)
             if score > 0 or not query:
                 scored.append((score, cmd))
@@ -175,7 +200,7 @@ class SlashCommandProvider(AutocompleteProvider):
         if not items:
             return None
 
-        return CompletionResult(items=items, prefix=stripped, replace_start=prefix_start)
+        return CompletionResult(items=items, prefix=token, replace_start=prefix_start)
 
     def apply_completion(
         self, text: str, cursor_col: int, item: ListItem, prefix: str

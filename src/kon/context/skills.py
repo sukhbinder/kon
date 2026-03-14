@@ -18,6 +18,17 @@ from .. import CONFIG_DIR_NAME, escape_xml, get_config_dir
 
 MAX_NAME_LENGTH = 64
 MAX_DESCRIPTION_LENGTH = 1024
+MAX_CMD_INFO_LENGTH = 32
+
+
+def _parse_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return False
 
 
 @dataclass
@@ -25,6 +36,8 @@ class Skill:
     path: str
     name: str
     description: str
+    register_cmd: bool = False
+    cmd_info: str = ""
 
 
 @dataclass
@@ -66,7 +79,7 @@ def _parse_frontmatter(content: str) -> dict[str, Any]:
 
 
 def _validate_skill(
-    name: str, description: str, parent_dir_name: str, file_path: str
+    name: str, description: str, parent_dir_name: str, file_path: str, cmd_info: str = ""
 ) -> list[SkillWarning]:
     warnings: list[SkillWarning] = []
 
@@ -95,6 +108,11 @@ def _validate_skill(
             SkillWarning(file_path, f"description exceeds {MAX_DESCRIPTION_LENGTH} characters")
         )
 
+    if len(cmd_info) > MAX_CMD_INFO_LENGTH:
+        warnings.append(
+            SkillWarning(file_path, f"cmd_info exceeds {MAX_CMD_INFO_LENGTH} characters")
+        )
+
     return warnings
 
 
@@ -113,13 +131,23 @@ def _load_skill_from_dir(skill_dir: Path) -> tuple[Skill | None, list[SkillWarni
         parent_dir_name = skill_dir.name
         name = frontmatter.get("name") or parent_dir_name
         description = frontmatter.get("description", "")
+        register_cmd = _parse_bool(frontmatter.get("register_cmd"))
+        cmd_info = str(frontmatter.get("cmd_info", "")).strip()
 
-        warnings = _validate_skill(name, description, parent_dir_name, file_path)
+        warnings = _validate_skill(
+            name, description, parent_dir_name, file_path, cmd_info=cmd_info
+        )
 
         if not description or not description.strip():
             return None, warnings
 
-        skill = Skill(name=name, description=description, path=file_path)
+        skill = Skill(
+            name=name,
+            description=description,
+            path=file_path,
+            register_cmd=register_cmd,
+            cmd_info=cmd_info,
+        )
         return skill, warnings
 
     except Exception as e:
@@ -196,6 +224,7 @@ def format_skills_for_prompt(skills: list[Skill]) -> str:
         "",
         "The following skills provide specialized instructions for specific tasks.",
         "Use the read tool to load a skill's file when the task matches its description.",
+        "If a skill is manually triggered via slash command, its description is already included in the user message, so you usually don't need to read the skill file unless you need additional detail.",
         "",
         "<available_skills>",
     ]

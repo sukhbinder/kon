@@ -58,6 +58,7 @@ class CommandsMixin:
 
         def _get_provider_api_type(self, provider: BaseProvider) -> ApiType: ...
         def _create_provider(self, api_type: ApiType, config: ProviderConfig) -> BaseProvider: ...
+        def _sync_slash_commands(self) -> None: ...
 
     def _handle_command(self, text: str) -> bool:
         parts = text[1:].split(maxsplit=1)
@@ -260,6 +261,7 @@ Keybindings:
         if self._agent is not None:
             self._agent.reload_context()
             self._agent.session = self._session
+            self._sync_slash_commands()
             # TODO: Surface self._agent.context.skill_warnings in UI
             chat.add_loaded_resources(
                 context_paths=[format_path(f.path) for f in self._agent.context.agents_files],

@@ -1,14 +1,29 @@
 from kon.ui.input import InputBox
 
 
+class _FakeSelection:
+    def __init__(self, row: int, col: int) -> None:
+        self.end = (row, col)
+
+
 class _FakeTextArea:
     def __init__(self, text: str) -> None:
         self.text = text
         self.cleared = False
+        self.selection = _FakeSelection(0, len(text))
 
     def clear(self) -> None:
         self.text = ""
         self.cleared = True
+        self.selection = _FakeSelection(0, 0)
+
+    def insert(self, text: str) -> None:
+        row, col = self.selection.end
+        if row != 0:
+            row = 0
+            col = len(self.text)
+        self.text = self.text[:col] + text + self.text[col:]
+        self.selection = _FakeSelection(0, col + len(text))
 
 
 class _TestableInputBox(InputBox):

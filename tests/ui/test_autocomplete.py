@@ -3,7 +3,14 @@ from pathlib import Path
 
 import pytest
 
-from kon.ui.autocomplete import DEFAULT_COMMANDS, CompletionResult, FilePathProvider, ListItem
+from kon.ui.autocomplete import (
+    DEFAULT_COMMANDS,
+    CompletionResult,
+    FilePathProvider,
+    ListItem,
+    SlashCommand,
+    SlashCommandProvider,
+)
 
 
 @pytest.fixture
@@ -279,3 +286,56 @@ def test_default_slash_commands_include_copy_and_compact():
     names = {cmd.name for cmd in DEFAULT_COMMANDS}
     assert "copy" in names
     assert "compact" in names
+
+
+def test_slash_provider_triggers_mid_input_for_skills_only():
+    provider = SlashCommandProvider(
+        [SlashCommand("compact", "Compact"), SlashCommand("custom-skill", "Skill", is_skill=True)]
+    )
+
+    text = "please run /cus"
+    cursor_col = len(text)
+
+    assert provider.should_trigger(text, cursor_col)
+    result = provider.get_suggestions(text, cursor_col)
+    assert result is not None
+    assert result.prefix == "/cus"
+    assert result.replace_start == text.rfind("/")
+    labels = [item.label for item in result.items]
+    assert labels == ["/custom-skill"]
+
+
+def test_slash_provider_mid_input_does_not_trigger_without_skills():
+    provider = SlashCommandProvider([SlashCommand("compact", "Compact")])
+
+    text = "please run /co"
+    cursor_col = len(text)
+
+    assert not provider.should_trigger(text, cursor_col)
+    assert provider.get_suggestions(text, cursor_col) is None
+
+
+def test_slash_provider_start_shows_full_menu():
+    provider = SlashCommandProvider(
+        [SlashCommand("compact", "Compact"), SlashCommand("custom-skill", "Skill", is_skill=True)]
+    )
+
+    text = "/"
+    cursor_col = len(text)
+
+    assert provider.should_trigger(text, cursor_col)
+    result = provider.get_suggestions(text, cursor_col)
+    assert result is not None
+    labels = [item.label for item in result.items]
+    assert "/compact" in labels
+    assert "/custom-skill" in labels
+
+
+def test_slash_provider_does_not_trigger_inside_word():
+    provider = SlashCommandProvider([SlashCommand("compact", "Compact")])
+
+    text = "path/compact"
+    cursor_col = len(text)
+
+    assert not provider.should_trigger(text, cursor_col)
+    assert provider.get_suggestions(text, cursor_col) is None

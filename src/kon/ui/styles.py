@@ -62,6 +62,10 @@ Screen {{
     border-bottom: solid grey;
 }}
 
+.user-block.skill-trigger-message {{
+    background: {colors.compaction.bg};
+}}
+
 /* Update available message */
 .update-available-block {{
     padding: 0 1;

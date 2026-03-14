@@ -197,15 +197,28 @@ class UserBlock(Static):
     ALLOW_SELECT = True
     can_focus = False
 
-    def __init__(self, content: str = "", **kwargs) -> None:
+    def __init__(self, content: str = "", highlighted_skill: str | None = None, **kwargs) -> None:
         super().__init__(**kwargs)
         self._content = content
+        self._highlighted_skill = highlighted_skill
         self.add_class("user-block")
+        if highlighted_skill:
+            self.add_class("skill-trigger-message")
 
     def compose(self) -> ComposeResult:
         text = Text()
-        text.append("> ", style="bold")
-        text.append(self._content)
+        if self._highlighted_skill:
+            text.append(self._content)
+            marker = f"[{self._highlighted_skill}]"
+            start = self._content.find(marker)
+            if start != -1:
+                text.stylize(
+                    f"{config.ui.colors.compaction.label} bold", start, start + len(marker)
+                )
+        else:
+            text.append("> ", style="bold")
+            text.append(self._content)
+
         yield Label(text)
 
 

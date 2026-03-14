@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 _PASTE_LINE_THRESHOLD = 5
 _PASTE_CHAR_THRESHOLD = 500
 _PASTE_MARKER_RE = re.compile(r"\[paste #(\d+)(?: (\+\d+ lines|\d+ chars))?\]")
+_SKILL_TRIGGER_MARKER = "\u2063"
 
 
 class Kon(TextArea):
@@ -118,6 +119,9 @@ class InputBox(Vertical):
         self._pastes: dict[int, str] = {}
         self._paste_counter: int = 0
 
+        # Skill command triggers selected from slash autocomplete
+        self._selected_skill_commands: list[str] = []
+
     def compose(self) -> ComposeResult:
         yield Kon(self._transform_paste, id="input-textarea", classes="input-textarea")
 
@@ -141,6 +145,7 @@ class InputBox(Vertical):
 
     def clear(self, *, reset_pastes: bool = True) -> None:
         self.query_one("#input-textarea", TextArea).clear()
+        self._selected_skill_commands.clear()
         if reset_pastes:
             self._reset_pastes()
 
@@ -204,6 +209,22 @@ class InputBox(Vertical):
         self._pastes.clear()
         self._paste_counter = 0
 
+    def _strip_skill_markers(self, text: str) -> str:
+        return text.replace(_SKILL_TRIGGER_MARKER, "")
+
+    def _extract_selected_skill_submission(self, text: str) -> tuple[str | None, str | None]:
+        pattern = re.compile(rf"{_SKILL_TRIGGER_MARKER}/([a-z0-9-]+){_SKILL_TRIGGER_MARKER}")
+        match = pattern.search(text)
+        if not match:
+            return None, None
+
+        skill_name = match.group(1)
+        if skill_name not in self._selected_skill_commands:
+            return None, None
+
+        query = (text[: match.start()] + text[match.end() :]).strip()
+        return skill_name, self._strip_skill_markers(query)
+
     # -------------------------------------------------------------------------
     # Text change handling - trigger autocomplete
     # -------------------------------------------------------------------------
@@ -221,10 +242,19 @@ class InputBox(Vertical):
 
         self._try_autocomplete()
 
+    def _cursor_offset(self, text: str, cursor: tuple[int, int]) -> int:
+        row, col = cursor
+        lines = text.split("\n")
+        if row <= 0:
+            return max(0, min(col, len(lines[0]) if lines else 0))
+        clamped_row = min(row, len(lines) - 1)
+        prefix_len = sum(len(line) + 1 for line in lines[:clamped_row])
+        return prefix_len + max(0, min(col, len(lines[clamped_row])))
+
     def _try_autocomplete(self) -> None:
         textarea = self.query_one("#input-textarea", TextArea)
         text = textarea.text
-        cursor_col = len(text)
+        cursor_col = self._cursor_offset(text, textarea.selection.end)
 
         # Check each provider
         for provider in self._providers:
@@ -257,12 +287,24 @@ class InputBox(Vertical):
         self._do_submit()
 
     def _do_submit(self) -> None:
-        display_text = self.text.strip()
-        if not display_text:
+        raw_text = self.text.strip()
+        if not raw_text:
             return
-        query_text = self._expand_paste_markers(display_text)
+        query_text = self._expand_paste_markers(raw_text)
+        selected_skill_name, selected_skill_query = self._extract_selected_skill_submission(
+            query_text
+        )
+        display_text = self._strip_skill_markers(raw_text)
+        query_text = self._strip_skill_markers(query_text)
         self._add_to_history(query_text)
-        self.post_message(self.Submitted(display_text, query_text=query_text))
+        self.post_message(
+            self.Submitted(
+                display_text,
+                query_text=query_text,
+                selected_skill_name=selected_skill_name,
+                selected_skill_query=selected_skill_query,
+            )
+        )
         self.clear(reset_pastes=True)
 
     def submit_raw(self) -> None:
@@ -392,15 +434,38 @@ class InputBox(Vertical):
         cmd: SlashCommand = item.value
         self._is_completing = False
         self._active_provider = None
+
+        if not cmd.is_skill:
+            self._completion_prefix = ""
+            self._suppress_autocomplete = 1  # clear() = 1 event
+            self.clear(reset_pastes=True)
+            self.post_message(self.Submitted(f"/{cmd.name}"))
+            return
+
+        prefix = self._completion_prefix
         self._completion_prefix = ""
-        self._suppress_autocomplete = 1  # clear() = 1 event
-        self.clear(reset_pastes=True)
-        self.post_message(self.Submitted(f"/{cmd.name}"))
+
+        textarea = self.query_one("#input-textarea", TextArea)
+        text = textarea.text
+        cursor_col = self._cursor_offset(text, textarea.selection.end)
+
+        new_text, _ = self._slash_provider.apply_completion(text, cursor_col, item, prefix)
+
+        if cmd.name not in self._selected_skill_commands:
+            self._selected_skill_commands.append(cmd.name)
+        marker_wrapped = f"{_SKILL_TRIGGER_MARKER}/{cmd.name}{_SKILL_TRIGGER_MARKER} "
+        plain = f"/{cmd.name} "
+        if plain in new_text:
+            new_text = new_text.replace(plain, marker_wrapped, 1)
+
+        self._suppress_autocomplete = 2  # clear() + insert() = 2 events
+        textarea.clear()
+        textarea.insert(new_text)
 
     def apply_file_completion(self, item: ListItem) -> None:
         textarea = self.query_one("#input-textarea", TextArea)
         text = textarea.text
-        cursor_col = len(text)
+        cursor_col = self._cursor_offset(text, textarea.selection.end)
 
         new_text, _ = self._file_provider.apply_completion(
             text, cursor_col, item, self._completion_prefix
@@ -417,7 +482,7 @@ class InputBox(Vertical):
         """Apply a tab path completion selection."""
         textarea = self.query_one("#input-textarea", TextArea)
         text = textarea.text
-        cursor_col = len(text)
+        cursor_col = self._cursor_offset(text, textarea.selection.end)
 
         # Get the selected path
         selected_path: str = item.value
@@ -473,10 +538,18 @@ class InputBox(Vertical):
     # -------------------------------------------------------------------------
 
     class Submitted(Message):
-        def __init__(self, text: str, query_text: str | None = None) -> None:
+        def __init__(
+            self,
+            text: str,
+            query_text: str | None = None,
+            selected_skill_name: str | None = None,
+            selected_skill_query: str | None = None,
+        ) -> None:
             super().__init__()
             self.text = text
             self.query_text = query_text if query_text is not None else text
+            self.selected_skill_name = selected_skill_name
+            self.selected_skill_query = selected_skill_query
 
     class CompletionUpdate(Message):
         def __init__(self, items: list[ListItem]) -> None:

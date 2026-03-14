@@ -19,6 +19,7 @@ from kon import config, consume_config_warnings, update_available_binaries
 from kon.tools_manager import ensure_tools
 
 from ..core.types import StopReason
+from ..context.skills import load_skills
 from ..events import (
     AgentEndEvent,
     AgentStartEvent,
@@ -57,7 +58,7 @@ from ..loop import Agent
 from ..session import Session
 from ..tools import DEFAULT_TOOLS, get_tools
 from ..update_check import get_newer_pypi_version
-from .autocomplete import FilePathProvider, SlashCommandProvider
+from .autocomplete import DEFAULT_COMMANDS, FilePathProvider, SlashCommand, SlashCommandProvider
 from .chat import ChatLog
 from .commands import CommandsMixin
 from .floating_list import FloatingList
@@ -177,6 +178,32 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
             id="info-bar",
         )
 
+    def _sync_slash_commands(self) -> None:
+        input_box = self.query_one("#input-box", InputBox)
+        commands = DEFAULT_COMMANDS.copy()
+
+        skills = self._agent.context.skills if self._agent else load_skills(self._cwd).skills
+        for skill in skills:
+            if not skill.register_cmd:
+                continue
+            cmd_description = skill.cmd_info
+            if not cmd_description:
+                cmd_description = skill.description[:32]
+                if len(skill.description) > 32:
+                    cmd_description = f"{cmd_description}..."
+            commands.append(
+                SlashCommand(name=skill.name, description=cmd_description, is_skill=True)
+            )
+
+        input_box.set_commands(commands)
+
+    @staticmethod
+    def _build_skill_trigger_message(skill_name: str, description: str, query: str) -> str:
+        truncated_description = description[:300]
+        if len(description) > 300:
+            truncated_description = f"{truncated_description}..."
+        return f"[{skill_name}]\n{truncated_description}\n\nquery: {query}"
+
     def _create_provider(self, api_type: ApiType, config: ProviderConfig) -> BaseProvider:
         if api_type in _COPILOT_API_TYPES and not is_copilot_logged_in():
             raise ValueError("Not logged in to GitHub Copilot. Use /login to authenticate.")
@@ -204,6 +231,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
 
         input_box = self.query_one("#input-box", InputBox)
         input_box.set_fd_path(self._fd_path)
+        input_box.set_commands(DEFAULT_COMMANDS.copy())
 
         if not self._fd_path:
             self.run_worker(self._collect_file_paths(), exclusive=False)
@@ -298,6 +326,8 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
                 session=self._session,
                 cwd=self._cwd,
             )
+
+        self._sync_slash_commands()
 
         chat = self.query_one("#chat-log", ChatLog)
         chat.add_session_info(VERSION)
@@ -571,6 +601,27 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
 
         query_text = event.query_text.strip()
 
+        skill_prompt: str | None = None
+        selected_skill_name = event.selected_skill_name
+        highlighted_skill: str | None = None
+        if selected_skill_name and self._agent:
+            selected_skill = next(
+                (
+                    skill
+                    for skill in self._agent.context.skills
+                    if skill.register_cmd and skill.name == selected_skill_name
+                ),
+                None,
+            )
+            if selected_skill:
+                skill_query = event.selected_skill_query or ""
+                skill_prompt = self._build_skill_trigger_message(
+                    selected_skill.name, selected_skill.description, skill_query
+                )
+                display_text = skill_prompt
+                query_text = skill_prompt
+                highlighted_skill = selected_skill.name
+
         if self._is_running:
             if len(self._pending_queue) >= QueueDisplay.MAX_QUEUE:
                 self.notify("Queue full (max 5)", severity="warning", timeout=2)
@@ -580,7 +631,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
             return
 
         chat = self.query_one("#chat-log", ChatLog)
-        chat.add_user_message(display_text)
+        chat.add_user_message(display_text, highlighted_skill=highlighted_skill)
 
         self._is_running = True
         self.run_worker(self._run_agent(query_text), exclusive=True)

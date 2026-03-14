@@ -52,12 +52,16 @@ description: "A quoted description"
         content = """---
 name: 'single-quoted'
 description: 'Another description'
+register_cmd: 'true'
+cmd_info: 'slash hint'
 ---
 """
         result = _parse_frontmatter(content)
 
         assert result["name"] == "single-quoted"
         assert result["description"] == "Another description"
+        assert result["register_cmd"] == "true"
+        assert result["cmd_info"] == "slash hint"
 
     def test_empty_values(self):
         content = """---
@@ -108,7 +112,9 @@ description: This has: a colon in it
 
 class TestValidateSkill:
     def test_valid_skill(self):
-        warnings = _validate_skill("my-skill", "A valid description", "my-skill", "/path/SKILL.md")
+        warnings = _validate_skill(
+            "my-skill", "A valid description", "my-skill", "/path/SKILL.md", cmd_info="menu"
+        )
 
         assert warnings == []
 
@@ -170,6 +176,13 @@ class TestValidateSkill:
 
         assert len(warnings) >= 3
 
+    def test_cmd_info_too_long(self):
+        warnings = _validate_skill(
+            "my-skill", "Description", "my-skill", "/path/SKILL.md", cmd_info="x" * 33
+        )
+
+        assert any("cmd_info exceeds 32 characters" in w.message for w in warnings)
+
 
 class TestLoadSkillFromDir:
     def test_load_valid_skill(self, tmp_path):
@@ -178,6 +191,8 @@ class TestLoadSkillFromDir:
         (skill_dir / "SKILL.md").write_text("""---
 name: my-skill
 description: A test skill
+register_cmd: true
+cmd_info: Quick publish helper
 ---
 # Skill content
 """)
@@ -187,6 +202,8 @@ description: A test skill
         assert skill is not None
         assert skill.name == "my-skill"
         assert skill.description == "A test skill"
+        assert skill.register_cmd is True
+        assert skill.cmd_info == "Quick publish helper"
         assert warnings == []
 
     def test_no_skill_file(self, tmp_path):
@@ -224,6 +241,24 @@ description: Uses directory name
 
         assert skill is not None
         assert skill.name == "fallback-skill"
+        assert skill.register_cmd is False
+        assert skill.cmd_info == ""
+
+    def test_register_cmd_parses_truthy_strings(self, tmp_path):
+        skill_dir = tmp_path / "cmd-skill"
+        skill_dir.mkdir()
+        (skill_dir / "SKILL.md").write_text("""---
+name: cmd-skill
+description: Slash skill
+register_cmd: yes
+---
+""")
+
+        skill, warnings = _load_skill_from_dir(skill_dir)
+
+        assert skill is not None
+        assert skill.register_cmd is True
+        assert warnings == []
 
 
 class TestLoadSkills:
