@@ -1,7 +1,11 @@
+from typing import Any, cast
+
 import pytest
+from anthropic.types import ThinkingConfigEnabledParam
 
 from kon.core.types import AssistantMessage, TextContent, ThinkingContent, ToolCall, UserMessage
-from kon.llm.providers.anthropic import AnthropicProvider
+from kon.llm.base import ProviderConfig
+from kon.llm.providers.anthropic import AnthropicProvider, supports_adaptive_thinking
 
 
 @pytest.fixture
@@ -56,3 +60,65 @@ def test_convert_assistant_message_keeps_signed_thinking(anthropic_provider: Ant
         "name": "read",
         "input": {"path": "a.txt"},
     }
+
+
+def test_supports_adaptive_thinking_detection():
+    assert supports_adaptive_thinking("claude-opus-4.6")
+    assert supports_adaptive_thinking("claude-opus-4-6")
+    assert supports_adaptive_thinking("claude-sonnet-4.6")
+    assert supports_adaptive_thinking("claude-sonnet-4-6")
+    assert not supports_adaptive_thinking("claude-3-7-sonnet")
+
+
+class _EmptyAsyncIterator:
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        raise StopAsyncIteration
+
+
+class _DummyStreamContext:
+    async def __aenter__(self):
+        return _EmptyAsyncIterator()
+
+
+class _DummyMessages:
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    def stream(self, **kwargs):
+        self.calls.append(kwargs)
+        return _DummyStreamContext()
+
+
+@pytest.mark.asyncio
+async def test_stream_uses_adaptive_thinking_for_claude_4_6():
+    provider = AnthropicProvider.__new__(AnthropicProvider)
+    provider.config = ProviderConfig(model="claude-sonnet-4.6", thinking_level="xhigh")
+    dummy_messages = _DummyMessages()
+    provider._client = cast(Any, type("DummyClient", (), {"messages": dummy_messages})())
+
+    stream = await provider._stream_impl(messages=[])
+    async for _ in stream:
+        pass
+
+    kwargs = dummy_messages.calls[0]
+    assert kwargs["thinking"] == {"type": "adaptive"}
+    assert kwargs["output_config"] == {"effort": "max"}
+    assert "temperature" not in kwargs
+
+
+@pytest.mark.asyncio
+async def test_stream_uses_budget_thinking_for_non_adaptive_models():
+    provider = AnthropicProvider.__new__(AnthropicProvider)
+    provider.config = ProviderConfig(model="claude-3-7-sonnet", thinking_level="high")
+    dummy_messages = _DummyMessages()
+    provider._client = cast(Any, type("DummyClient", (), {"messages": dummy_messages})())
+
+    stream = await provider._stream_impl(messages=[])
+    async for _ in stream:
+        pass
+
+    kwargs = dummy_messages.calls[0]
+    assert kwargs["thinking"] == ThinkingConfigEnabledParam(type="enabled", budget_tokens=8192)

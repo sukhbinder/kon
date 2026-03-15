@@ -13,21 +13,13 @@ from anthropic.types import ThinkingConfigEnabledParam
 from ...core.types import Message, ToolDefinition
 from ..base import BaseProvider, LLMStream, ProviderConfig
 from ..oauth import COPILOT_HEADERS, get_base_url_from_token, get_valid_token, load_credentials
-from .anthropic import THINKING_BUDGET_MAP, AnthropicProvider
+from .anthropic import (
+    THINKING_BUDGET_MAP,
+    THINKING_LEVEL_TO_EFFORT,
+    AnthropicProvider,
+    supports_adaptive_thinking,
+)
 from .github_copilot_headers import build_copilot_dynamic_headers
-
-
-def _supports_adaptive_thinking(model_id: str) -> bool:
-    return "opus-4-6" in model_id or "opus-4.6" in model_id
-
-
-THINKING_LEVEL_TO_EFFORT: dict[str, str] = {
-    "minimal": "low",
-    "low": "low",
-    "medium": "medium",
-    "high": "high",
-    "xhigh": "max",
-}
 
 
 class CopilotAnthropicProvider(AnthropicProvider):
@@ -99,7 +91,7 @@ class CopilotAnthropicProvider(AnthropicProvider):
         temp = temperature if temperature is not None else self.config.temperature
 
         # Adaptive thinking for Opus 4.6+ (like pi-mono)
-        if _supports_adaptive_thinking(self.config.model):
+        if supports_adaptive_thinking(self.config.model):
             thinking_level = self.config.thinking_level
             if thinking_level and thinking_level != "none":
                 create_kwargs["thinking"] = {"type": "adaptive"}

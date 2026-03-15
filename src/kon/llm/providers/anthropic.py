@@ -50,6 +50,24 @@ THINKING_BUDGET_MAP: dict[str, int] = {
     "xhigh": 16384,
 }
 
+THINKING_LEVEL_TO_EFFORT: dict[str, str] = {
+    "minimal": "low",
+    "low": "low",
+    "medium": "medium",
+    "high": "high",
+    "xhigh": "max",
+}
+
+
+def supports_adaptive_thinking(model_id: str) -> bool:
+    model_id = model_id.lower()
+    return (
+        "opus-4-6" in model_id
+        or "opus-4.6" in model_id
+        or "sonnet-4-6" in model_id
+        or "sonnet-4.6" in model_id
+    )
+
 
 class AnthropicProvider(BaseProvider):
     name = "anthropic"
@@ -99,13 +117,19 @@ class AnthropicProvider(BaseProvider):
 
         # Add temperature if specified and not using thinking
         temp = temperature if temperature is not None else self.config.temperature
-        thinking_budget = THINKING_BUDGET_MAP.get(self.config.thinking_level, 0)
+        thinking_level = self.config.thinking_level
+        thinking_budget = THINKING_BUDGET_MAP.get(thinking_level, 0)
 
         if thinking_budget > 0:
-            # Extended thinking - temperature must be 1
-            create_kwargs["thinking"] = ThinkingConfigEnabledParam(
-                type="enabled", budget_tokens=thinking_budget
-            )
+            if supports_adaptive_thinking(self.config.model):
+                create_kwargs["thinking"] = {"type": "adaptive"}
+                effort = THINKING_LEVEL_TO_EFFORT.get(thinking_level, "high")
+                create_kwargs["output_config"] = {"effort": effort}
+            else:
+                # Extended thinking - temperature must be 1
+                create_kwargs["thinking"] = ThinkingConfigEnabledParam(
+                    type="enabled", budget_tokens=thinking_budget
+                )
             # Don't set temperature when thinking is enabled (defaults to 1)
         elif temp is not None:
             create_kwargs["temperature"] = temp
