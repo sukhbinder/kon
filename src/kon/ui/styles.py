@@ -145,11 +145,6 @@ Screen {{
     margin-top: 0;
 }}
 
-/* First info message after session info - no margin */
-.info-message:first-of-type {{
-    margin-top: 0;
-}}
-
 /* Queue display - shown above status line when messages are queued */
 #queue-display {{
     height: auto;
