@@ -51,7 +51,7 @@ class FileChangesModal(ModalScreen[None]):
     #file-changes-container {
         width: 80;
         max-width: 90%;
-        max-height: 80%;
+        max-height: 50%;
         padding: 1 2;
         border: solid grey;
     }
@@ -176,8 +176,8 @@ class InfoBar(Vertical):
             yield Label(self._format_row1_left(), id="info-cwd")
             yield Label(self._format_row1_right(), id="info-row1-right")
         with Horizontal(id="info-row-2"):
-            yield Label(self._format_row2_left(), id="info-row2-left")
-            yield Label(self._format_row2_right(), id="info-row2-right")
+            yield Label(self._format_row2_right(), id="info-row2-left")
+            yield Label(self._format_row2_left(), id="info-row2-right")
 
     def _format_row1_left(self) -> Text:
         result = Text(self._cwd)
@@ -267,11 +267,11 @@ class InfoBar(Vertical):
     def set_model(self, model: str, provider: str | None = None) -> None:
         self._model = model
         self._model_provider = provider
-        self.query_one("#info-row2-left", Label).update(self._format_row2_left())
+        self.query_one("#info-row2-right", Label).update(self._format_row2_left())
 
     def set_thinking_level(self, thinking_level: str) -> None:
         self._thinking_level = thinking_level
-        self.query_one("#info-row2-left", Label).update(self._format_row2_left())
+        self.query_one("#info-row2-right", Label).update(self._format_row2_left())
 
     def set_thinking_visibility(self, hide_thinking: bool) -> None:
         self._hide_thinking = hide_thinking
@@ -279,17 +279,17 @@ class InfoBar(Vertical):
     def update_file_changes(self, path: str, added: int, removed: int) -> None:
         prev_added, prev_removed = self._file_changes.get(path, (0, 0))
         self._file_changes[path] = (prev_added + added, prev_removed + removed)
-        self.query_one("#info-row2-right", Label).update(self._format_row2_right())
+        self.query_one("#info-row2-left", Label).update(self._format_row2_right())
 
     def set_file_changes(self, file_changes: dict[str, tuple[int, int]]) -> None:
         self._file_changes = file_changes
-        self.query_one("#info-row2-right", Label).update(self._format_row2_right())
+        self.query_one("#info-row2-left", Label).update(self._format_row2_right())
 
     def on_click(self, event: events.Click) -> None:
         if not self._file_changes:
             return
         widget, _ = self.screen.get_widget_at(event.screen_x, event.screen_y)
-        if widget is self.query_one("#info-row2-right", Label):
+        if widget is self.query_one("#info-row2-left", Label):
             event.stop()
             self.app.push_screen(FileChangesModal(self._file_changes))
 
