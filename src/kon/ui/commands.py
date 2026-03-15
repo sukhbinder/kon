@@ -175,6 +175,8 @@ Keybindings:
             self.notify("No models configured", title="Models", timeout=3, severity="warning")
             return
 
+        models.sort(key=lambda m: (m.provider, m.id))
+
         items: list[ListItem] = []
         for m in models:
             parts = [m.provider]
