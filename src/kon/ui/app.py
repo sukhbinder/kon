@@ -389,6 +389,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
                 self._calculate_session_tokens(self._session)
             )
             info_bar.set_tokens(input_t, output_t, context_t, cache_read_t, cache_write_t)
+            info_bar.set_file_changes(self._calculate_session_file_changes(self._session))
             chat.add_info_message("Resumed session")
 
         if self._provider and self._session:
@@ -812,7 +813,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
                         case ToolEndEvent(tool_call_id=id, display=display):
                             chat.update_tool_call_msg(id, display)
 
-                        case ToolResultEvent(tool_call_id=id, result=r):
+                        case ToolResultEvent(tool_call_id=id, result=r, file_changes=fc):
                             if r:
                                 if r.display:
                                     text = r.display
@@ -825,6 +826,8 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
                                     markup = False
                                 success = not r.is_error
                                 chat.set_tool_result(id, text, success, markup=markup)
+                            if fc:
+                                info_bar.update_file_changes(fc.path, fc.added, fc.removed)
 
                         case TurnEndEvent():
                             if event.assistant_message and event.assistant_message.usage:

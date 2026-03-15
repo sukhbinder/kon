@@ -32,6 +32,7 @@ from pydantic import ValidationError
 from . import config as kon_config
 from .core.types import (
     AssistantMessage,
+    FileChanges,
     ImageContent,
     Message,
     StopReason,
@@ -146,14 +147,14 @@ def _finalize_tool_call_data(tool_call_data: dict, tools: list[BaseTool]) -> Pen
 
 async def _execute_tool(
     tool_call: ToolCall, tool: BaseTool | None, cancel_event: asyncio.Event | None = None
-) -> ToolResultMessage:
+) -> tuple[ToolResultMessage, FileChanges | None]:
     if not tool:
         return ToolResultMessage(
             tool_call_id=tool_call.id,
             tool_name=tool_call.name,
             content=[TextContent(text=f"Unknown tool: {tool_call.name}")],
             is_error=True,
-        )
+        ), None
 
     try:
         params = tool.params(**tool_call.arguments)
@@ -173,14 +174,15 @@ async def _execute_tool(
             content=content,
             display=result.display,
             is_error=not result.success,
-        )
+            file_changes=result.file_changes,
+        ), result.file_changes
     except Exception as e:
         return ToolResultMessage(
             tool_call_id=tool_call.id,
             tool_name=tool_call.name,
             content=[TextContent(text=f"Error executing tool: {e}")],
             is_error=True,
-        )
+        ), None
 
 
 async def run_single_turn(
@@ -475,10 +477,15 @@ async def run_single_turn(
                 tool_call_id=pending.tool_call.id, tool_name=pending.tool_call.name, result=result
             )
         else:
-            result = await _execute_tool(pending.tool_call, pending.tool, cancel_event)
+            result, file_changes = await _execute_tool(
+                pending.tool_call, pending.tool, cancel_event
+            )
             tool_results.append(result)
             yield ToolResultEvent(
-                tool_call_id=pending.tool_call.id, tool_name=pending.tool_call.name, result=result
+                tool_call_id=pending.tool_call.id,
+                tool_name=pending.tool_call.name,
+                result=result,
+                file_changes=file_changes,
             )
 
     if interrupted:

@@ -205,6 +205,11 @@ Screen {{
     padding: 0 1;
 }}
 
+#info-row2-left {{
+    width: 1fr;
+    padding: 0 1;
+}}
+
 #info-row1-right, #info-row2-right {{
     width: auto;
     padding: 0 1;

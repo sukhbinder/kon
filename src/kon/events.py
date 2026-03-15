@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from .core.types import AssistantMessage, StopReason, ToolResultMessage, Usage
+from .core.types import AssistantMessage, FileChanges, StopReason, ToolResultMessage, Usage
 
 # =================================================================================================
 # Agent Lifecycle Events
@@ -123,6 +123,7 @@ class ToolResultEvent:
     tool_call_id: str = ""
     tool_name: str = ""
     result: ToolResultMessage | None = None
+    file_changes: FileChanges | None = None
 
 
 # =================================================================================================

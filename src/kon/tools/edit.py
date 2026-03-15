@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from kon import config
 
+from ..core.types import FileChanges
 from ..shared import shorten_path
 from .base import BaseTool, ToolResult
 
@@ -196,4 +197,9 @@ class EditTool(BaseTool):
         )
         display += f"\n{diff_display}"
 
-        return ToolResult(success=True, result=result, display=display)
+        return ToolResult(
+            success=True,
+            result=result,
+            display=display,
+            file_changes=FileChanges(path=str(file_path), added=added, removed=removed),
+        )

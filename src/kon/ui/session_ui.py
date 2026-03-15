@@ -177,6 +177,17 @@ class SessionUIMixin:
 
         return input_tokens, output_tokens, context_tokens, cache_read_tokens, cache_write_tokens
 
+    @staticmethod
+    def _calculate_session_file_changes(session: Session) -> dict[str, tuple[int, int]]:
+        file_changes: dict[str, tuple[int, int]] = {}
+        for entry in session.entries:
+            if isinstance(entry, MessageEntry) and isinstance(entry.message, ToolResultMessage):
+                fc = entry.message.file_changes
+                if fc:
+                    prev_added, prev_removed = file_changes.get(fc.path, (0, 0))
+                    file_changes[fc.path] = (prev_added + fc.added, prev_removed + fc.removed)
+        return file_changes
+
     async def _load_session_by_id(self, session_id: str) -> None:
         chat = self.query_one("#chat-log", ChatLog)
         input_box = self.query_one("#input-box", InputBox)
@@ -218,6 +229,7 @@ class SessionUIMixin:
             session
         )
         info_bar.set_tokens(input_t, output_t, context_t, cache_read_t, cache_write_t)
+        info_bar.set_file_changes(self._calculate_session_file_changes(session))
         info_bar.set_session_id(session.id[:8])
 
         model_info = session.model

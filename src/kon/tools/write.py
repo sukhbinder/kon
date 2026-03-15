@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from kon import config
 
+from ..core.types import FileChanges
 from ..shared import shorten_path
 from .base import BaseTool, ToolResult
 
@@ -34,6 +35,15 @@ class WriteTool(BaseTool):
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_existed = file_path.exists()
 
+        old_line_count = 0
+        if file_existed:
+            try:
+                async with aiofiles.open(file_path, encoding="utf-8") as f:
+                    old_content = await f.read()
+                old_line_count = old_content.count("\n") + 1
+            except (OSError, UnicodeDecodeError):
+                pass
+
         try:
             async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
                 await f.write(params.content)
@@ -51,4 +61,9 @@ class WriteTool(BaseTool):
             result = f"Created {file_path} +{n_lines}"
             display = f"[dim]Created {short_path}[/dim] [{diff_added}]+{n_lines}[/{diff_added}]"
 
-        return ToolResult(success=True, result=result, display=display)
+        return ToolResult(
+            success=True,
+            result=result,
+            display=display,
+            file_changes=FileChanges(path=str(file_path), added=n_lines, removed=old_line_count),
+        )

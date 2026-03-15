@@ -128,6 +128,7 @@ class ToolResultMessage(BaseModel):
     content: list[TextContent | ImageContent]
     display: str | None = None  # Formatted for UI display (Rich markup supported)
     is_error: bool = False
+    file_changes: FileChanges | None = None
 
 
 Message = UserMessage | AssistantMessage | ToolResultMessage
@@ -150,8 +151,15 @@ class ToolDefinition(BaseModel):
     parameters: dict[str, Any]  # JSON Schema
 
 
+class FileChanges(BaseModel):
+    path: str
+    added: int = 0
+    removed: int = 0
+
+
 class ToolResult(BaseModel):
     success: bool
     result: str | None = None  # Raw result (sent to LLM)
     images: list[ImageContent] | None = None  # Images to include in result
     display: str | None = None  # Formatted for UI display (Rich markup supported)
+    file_changes: FileChanges | None = None  # Track +/- lines for edit/write tools
