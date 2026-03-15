@@ -161,6 +161,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
 
         self._pending_queue: deque[tuple[str, str]] = deque(maxlen=QueueDisplay.MAX_QUEUE)
         self._exit_hints: list[str] = []
+        self._session_start_time: float | None = None
 
         self._provider: BaseProvider | None = None
         self._session: Session | None = None
@@ -318,6 +319,8 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
             if self._thinking_level not in valid_levels:
                 self._thinking_level = valid_levels[0] if valid_levels else "medium"
                 self._provider.set_thinking_level(self._thinking_level)
+
+        self._session_start_time = time.time()
 
         if not self._continue_recent and not self._resume_session:
             selected_model = get_model(self._model, self._model_provider)
@@ -903,12 +906,61 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         self._show_pending_update_notice_if_idle()
 
 
-def _print_exit_message(messages: list[str], hints: list[str]) -> None:
-    console = Console()
+_LOGO = ["█ K █", "█ O █", "█ N █"]
+
+
+def _format_duration(seconds: float) -> str:
+    total = int(seconds)
+    if total < 60:
+        return f"{total}s"
+    minutes = total // 60
+    secs = total % 60
+    return f"{minutes}m {secs}s"
+
+
+def _print_exit_message(
+    hints: list[str],
+    session_id: str | None = None,
+    duration_seconds: float | None = None,
+    file_changes: dict[str, tuple[int, int]] | None = None,
+) -> None:
+    colors = config.ui.colors
+    console = Console(highlight=False)
+
     for hint in hints:
         console.print(f"Hint: [bright_black]{hint}[/bright_black]")
-    for msg in messages:
-        console.print(msg, style="bright_black", highlight=False)
+
+    t = colors.dim
+    logo_color = "bright_black"
+    info_lines: list[str] = []
+
+    if duration_seconds is not None:
+        info_lines.append(f"[{t}]Elapsed {_format_duration(duration_seconds)}[/{t}]")
+
+    if file_changes:
+        n_files = len(file_changes)
+        total_added = sum(a for a, _ in file_changes.values())
+        total_removed = sum(r for _, r in file_changes.values())
+        info_lines.append(
+            f"[{t}]Changed {n_files} file{'s' if n_files != 1 else ''}[/{t}]"
+            f" [{colors.diff_added}]+{total_added}[/{colors.diff_added}]"
+            f" [{colors.diff_removed}]-{total_removed}[/{colors.diff_removed}]"
+        )
+
+    if session_id:
+        info_lines.append(f"[{t}]kon -r {session_id}[/{t}]")
+
+    if not info_lines:
+        return
+
+    while len(info_lines) < len(_LOGO):
+        info_lines.append("")
+
+    console.print()
+    for logo_line, info_line in zip(_LOGO, info_lines, strict=False):
+        padding = "  " if info_line else ""
+        console.print(f"  [{logo_color}]{logo_line}[/{logo_color}]{padding}{info_line}")
+    console.print()
 
 
 def main():
@@ -948,11 +1000,18 @@ def main():
     app.run()
 
     hints = list(app._exit_hints)
-    messages: list[str] = []
+    session_id: str | None = None
+    duration: float | None = None
+    file_changes: dict[str, tuple[int, int]] | None = None
+
     if app._session:
-        messages.append(f"kon -r {app._session.id}")
-    if hints or messages:
-        _print_exit_message(messages, hints)
+        session_id = app._session.id
+        file_changes = SessionUIMixin._calculate_session_file_changes(app._session) or None
+    if app._session_start_time is not None:
+        duration = time.time() - app._session_start_time
+
+    if hints or session_id:
+        _print_exit_message(hints, session_id, duration, file_changes)
 
 
 if __name__ == "__main__":
