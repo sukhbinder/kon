@@ -6,7 +6,7 @@
 
 Kon is a minimal coding agent with a tiny harness: about **215 tokens** for the system prompt and around **600 tokens** for tool definitions – so **under 1k tokens** before conversation context.
 
-At the time of writing this README (**25 Feb 2026**), this repo has **112 files** and is easy to understand in a weekend. Here’s a rough file-count comparison against a couple of popular OSS coding agents:
+At the time of writing this README (**25 Feb 2026**), this repo has **112 files** and is easy to understand in a weekend. Here's a rough file-count comparison against a couple of popular OSS coding agents:
 
 Others are of course more mature, support more models, include broader test coverage, and cover more surfaces. But if you want a truly minimal coding agent with batteries included – something you can understand, fork, and extend quickly – Kon might be interesting.
 
@@ -54,7 +54,7 @@ CLI options:
 
 ```text
 usage: kon [-h] [--model MODEL]
-           [--provider {github-copilot,openai,openai-codex,openai-responses,zhipu}]
+           [--provider {azure-ai-foundry,github-copilot,openai,openai-codex,openai-responses,zhipu}]
            [--api-key API_KEY] [--base-url BASE_URL] [--continue]
            [--resume RESUME_SESSION]
 
@@ -63,7 +63,7 @@ Kon TUI
 options:
   -h, --help            show this help message and exit
   --model, -m MODEL     Model to use
-  --provider, -p {github-copilot,openai,openai-codex,openai-responses,zhipu}
+  --provider, -p {azure-ai-foundry,github-copilot,openai,openai-codex,openai-responses,zhipu}
                         Provider to use
   --api-key, -k API_KEY
                         API key
@@ -86,6 +86,7 @@ options:
 - **GitHub Copilot OAuth**: run `/login` and choose GitHub Copilot.
 - **OpenAI OAuth (Codex)**: run `/login` and choose OpenAI. Kon supports callback flow plus manual paste fallback.
 - **OpenAI-compatible providers (for example ZhiPu)**: set an API key via environment variable (`OPENAI_API_KEY` or `ZAI_API_KEY`).
+- **Azure AI Foundry**: set `AZURE_AI_FOUNDRY_API_KEY` and `AZURE_AI_FOUNDRY_BASE_URL` environment variables.
 
 ## Features
 
@@ -242,14 +243,14 @@ kon --model zai-org/glm-4.7-flash \
 | `*qwen/qwen3-coder-next` | OpenAI Completions | Yes | No |
 | `glm-4.7` | ZhiPu (OpenAI Completions) | Yes | No |
 | `glm-5` | ZhiPu (OpenAI Completions) | Yes | No |
-| `claude-sonnet-4.5` | GitHub Copilot | Yes | Yes |
-| `claude-opus-4.5` | GitHub Copilot | Yes | Yes |
 | `claude-sonnet-4.6` | GitHub Copilot | Yes | Yes |
 | `claude-opus-4.6` | GitHub Copilot | Yes | Yes |
 | `gpt-5.3-codex` | GitHub Copilot | Yes | Yes |
 | `gpt-5.4` | GitHub Copilot | Yes | Yes |
 | `gpt-5.3-codex` | OpenAI Codex Responses | Yes | Yes |
 | `gpt-5.4` | OpenAI Codex Responses | Yes | Yes |
+| `claude-sonnet-4.6` | Azure AI Foundry | Yes | Yes |
+| `claude-opus-4.6` | Azure AI Foundry | Yes | Yes |
 
 
 ## Configuration
@@ -259,31 +260,56 @@ Config lives at `~/.kon/config.toml` (auto-created on first run).
 Kon also runs automatic config migrations on startup for older schemas. When a migration is applied,
 the previous file is backed up to `~/.kon/config.toml.bak.<timestamp>`.
 
-Most important knobs:
-
-- `llm.default_provider`
-- `llm.default_model`
-- `llm.default_thinking_level`
-- `llm.system_prompt` (**you can fully override Kon’s system prompt here**)
-- `llm.tool_call_idle_timeout_seconds` (fallback timeout for stalled tool-call streaming)
-- `compaction.on_overflow`, `compaction.buffer_tokens`
-- `agent.max_turns`, `agent.default_context_window`
-
-You can also theme the UI via `[ui.colors]` values.
-
-Example:
+Here's the full default config with all available options:
 
 ```toml
+[meta]
+config_version = 2
+
 [llm]
-default_provider = "openai-codex"
+default_provider = "openai-codex" # "zhipu", "github-copilot", "openai-codex", "azure-ai-foundry"
 default_model = "gpt-5.4"
+default_base_url = ""
 default_thinking_level = "high"
-tool_call_idle_timeout_seconds = 60
-system_prompt = """Your custom system prompt here"""
+tool_call_idle_timeout_seconds = 120
+
+[llm.system_prompt]
+git_context = false
+content = """You are an expert coding assistant called `Kon`.
+...
+"""
 
 [compaction]
-on_overflow = "continue"
+on_overflow = "continue" # "continue" or "pause"
 buffer_tokens = 20000
+
+[agent]
+max_turns = 500
+default_context_window = 200000
+
+[ui.colors]
+dim = "#666666"
+muted = "#808080"
+title = "#d97706"
+spinner = "#d97706"
+accent = "#8ABEB7"
+info = "#ffff00"
+markdown_heading = "#f0c674"
+markdown_code = "#689d6a"
+selected = "#689d6a"
+error = "#e06c75"
+notice = "#e5c07b"
+diff_added = "#b5bd68"
+diff_removed = "#cc6666"
+
+[ui.colors.tool_bg]
+pending = "#282832"
+success = "#283228"
+error = "#3c2828"
+
+[ui.colors.badge]
+bg = "#2d2838"
+label = "#9575cd"
 ```
 
 ## Development setup
