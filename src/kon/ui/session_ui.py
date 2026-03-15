@@ -17,6 +17,7 @@ from ..llm import ApiType, BaseProvider, ProviderConfig, get_max_tokens, get_mod
 from ..session import CompactionEntry, CustomMessageEntry, MessageEntry, Session
 from ..tools import tools_by_name
 from .chat import ChatLog
+from .commands import CommandsMixin
 from .input import InputBox
 from .widgets import InfoBar, StatusLine, format_path
 
@@ -127,14 +128,17 @@ class SessionUIMixin:
                     (entry.details or {}).get("target_session_id") or ""
                 ).strip()
                 query = str((entry.details or {}).get("query") or "").strip()
-                if entry.custom_type == "handoff_backlink" and target_session_id:
+                if entry.custom_type == CommandsMixin.HANDOFF_BACKLINK_TYPE and target_session_id:
                     chat.add_handoff_link_message(
                         label="Origin session",
                         target_session_id=target_session_id,
                         query=query,
                         direction="back",
                     )
-                elif entry.custom_type == "handoff_forward_link" and target_session_id:
+                elif (
+                    entry.custom_type == CommandsMixin.HANDOFF_FORWARD_LINK_TYPE
+                    and target_session_id
+                ):
                     chat.add_handoff_link_message(
                         label="Handoff session",
                         target_session_id=target_session_id,

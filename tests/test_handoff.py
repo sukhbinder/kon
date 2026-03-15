@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from typing import Literal
 
 import pytest
 
@@ -68,6 +69,9 @@ class _FakeChat:
     def show_status(self, message: str) -> None:
         self.statuses.append(message)
 
+    def show_spinner_status(self, message: str) -> None:
+        self.statuses.append(message)
+
     async def remove_all_children(self) -> None:
         return None
 
@@ -78,7 +82,7 @@ class _FakeChat:
         return None
 
     def add_handoff_link_message(
-        self, label: str, target_session_id: str, query: str, direction: str
+        self, label: str, target_session_id: str, query: str, direction: Literal["back", "forward"]
     ) -> None:
         return None
 
