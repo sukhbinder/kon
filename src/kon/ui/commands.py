@@ -187,7 +187,7 @@ Keybindings:
             items.append(ListItem(value=m, label=m.id, description=caption))
 
         completion_list = self.query_one("#completion-list", FloatingList)
-        completion_list.show(items)
+        completion_list.show(items, searchable=True)
 
         input_box = self.query_one("#input-box", InputBox)
         input_box.clear()
@@ -466,7 +466,7 @@ Keybindings:
             return
 
         completion_list = self.query_one("#completion-list", FloatingList)
-        completion_list.show(items)
+        completion_list.show(items, searchable=True)
 
         input_box = self.query_one("#input-box", InputBox)
         input_box.clear()
@@ -541,7 +541,7 @@ Keybindings:
             items.append(ListItem(value=p["id"], label=p["name"], description=status))
 
         completion_list = self.query_one("#completion-list", FloatingList)
-        completion_list.show(items)
+        completion_list.show(items, searchable=True)
 
         input_box = self.query_one("#input-box", InputBox)
         input_box.clear()
@@ -641,7 +641,7 @@ Keybindings:
             items.append(ListItem(value=p["id"], label=p["name"], description=""))
 
         completion_list = self.query_one("#completion-list", FloatingList)
-        completion_list.show(items)
+        completion_list.show(items, searchable=True)
 
         input_box = self.query_one("#input-box", InputBox)
         input_box.clear()

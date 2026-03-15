@@ -495,6 +495,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         input_box = self.query_one("#input-box", InputBox)
         if self._selection_mode is not None:
             self._selection_mode = None
+            input_box.clear()
             input_box.set_autocomplete_enabled(True)
             self._reset_ctrl_d_delete_state()
 
@@ -516,6 +517,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
             completion_list.hide()
             selection_mode = self._selection_mode
             self._selection_mode = None
+            input_box.clear()
             input_box.set_autocomplete_enabled(True)
             input_box.set_completing(False)
             self._reset_ctrl_d_delete_state()
@@ -546,6 +548,13 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
             input_box.apply_file_completion(item)
 
         input_box.set_completing(False)
+
+    @on(InputBox.SearchUpdate)
+    def on_search_update(self, event: InputBox.SearchUpdate) -> None:
+        if self._selection_mode is None:
+            return
+        completion_list = self.query_one("#completion-list", FloatingList)
+        completion_list.set_search_query(event.query)
 
     @on(InputBox.CompletionMove)
     def on_completion_move(self, event: InputBox.CompletionMove) -> None:

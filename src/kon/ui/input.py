@@ -273,6 +273,10 @@ class InputBox(Vertical):
             return
 
         if not self._autocomplete_enabled:
+            # When completing with autocomplete disabled (selection mode),
+            # route text to the floating list search
+            if self._is_completing:
+                self.post_message(self.SearchUpdate(self.text))
             return
 
         self._try_autocomplete()
@@ -619,3 +623,8 @@ class InputBox(Vertical):
         def __init__(self, direction: int) -> None:
             super().__init__()
             self.direction = direction
+
+    class SearchUpdate(Message):
+        def __init__(self, query: str) -> None:
+            super().__init__()
+            self.query = query
