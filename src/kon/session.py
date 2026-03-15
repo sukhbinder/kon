@@ -163,8 +163,9 @@ class Session:
         self._initial_model_id = initial_model_id
         self._initial_thinking_level = initial_thinking_level
 
-        # Track if we've written to disk yet
+        # Track disk persistence state
         self._flushed = False
+        self._persisted_entries_count = 0
 
     @property
     def id(self) -> str:
@@ -205,12 +206,22 @@ class Session:
         if not has_assistant:
             return
 
+        # If earlier entries were skipped (e.g., pre-assistant user/custom messages),
+        # rewrite to include the full sequence before appending incrementally again.
+        if self._persisted_entries_count < len(self._entries) - 1:
+            self._write_all()
+            self._flushed = True
+            self._persisted_entries_count = len(self._entries)
+            return
+
         if not self._flushed:
             self._write_all()
             self._flushed = True
+            self._persisted_entries_count = len(self._entries)
         else:
             with open(self._session_file, "a") as f:
                 f.write(entry.model_dump_json() + "\n")
+            self._persisted_entries_count += 1
 
     def _write_all(self) -> None:
         if not self._session_file:
@@ -229,6 +240,7 @@ class Session:
             return
         self._write_all()
         self._flushed = True
+        self._persisted_entries_count = len(self._entries)
 
     def append_message(self, message: Message) -> str:
         entry = MessageEntry(
@@ -484,6 +496,7 @@ class Session:
         session._by_id = {e.id: e for e in entries}
         session._leaf_id = entries[-1].id if entries else None
         session._flushed = True  # Already on disk
+        session._persisted_entries_count = len(entries)
 
         return session
 

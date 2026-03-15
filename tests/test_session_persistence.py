@@ -543,6 +543,37 @@ def test_ensure_persisted_writes_session_without_assistant(tmp_path, monkeypatch
     assert custom_entries[0].custom_type == "handoff_backlink"
 
 
+def test_append_after_ensure_persisted_backfills_skipped_entries(tmp_path, monkeypatch):
+    monkeypatch.setattr("kon.session.Session.get_sessions_dir", lambda cwd: tmp_path)
+
+    session = Session.create("/test/project")
+    session.append_custom_message("handoff_backlink", "origin", display=False)
+    user_id = session.append_message(UserMessage(content="hello from handoff"))
+
+    # Force early flush before any assistant message exists (handoff flow does this).
+    session.ensure_persisted()
+
+    assistant_id = session.append_message(AssistantMessage(content=[TextContent(text="ready")]))
+
+    assert session.session_file is not None
+    loaded = Session.load(session.session_file)
+
+    assert len(loaded.entries) == 3
+    assert isinstance(loaded.entries[0], CustomMessageEntry)
+    assert isinstance(loaded.entries[1], MessageEntry)
+    assert isinstance(loaded.entries[2], MessageEntry)
+
+    user_entry = loaded.entries[1]
+    assistant_entry = loaded.entries[2]
+    assert isinstance(user_entry, MessageEntry)
+    assert user_entry.id == user_id
+    assert user_entry.message.role == "user"
+
+    assert isinstance(assistant_entry, MessageEntry)
+    assert assistant_entry.id == assistant_id
+    assert assistant_entry.parent_id == user_id
+
+
 def test_continue_by_id_not_found(tmp_path, monkeypatch):
     monkeypatch.setattr("kon.session.Session.get_sessions_dir", lambda cwd: tmp_path)
 
