@@ -51,8 +51,10 @@ class Kon(TextArea):
     async def _on_key(self, event: events.Key) -> None:
         future = getattr(self.app, "_approval_future", None)
         if future and not future.done() and event.key in ("y", "Y", "n", "N"):
-            self.app.on_key(event)
-            return
+            app_on_key = getattr(self.app, "on_key", None)
+            if callable(app_on_key):
+                app_on_key(event)
+                return
         await super()._on_key(event)
 
     async def _on_paste(self, event: events.Paste) -> None:
