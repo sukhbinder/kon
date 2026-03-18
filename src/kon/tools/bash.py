@@ -143,6 +143,7 @@ class BashParams(BaseModel):
 
 class BashTool(BaseTool):
     name = "bash"
+    tool_icon = "*"
     params = BashParams
     description = (
         "Execute a bash command in the current working directory. "
@@ -171,13 +172,15 @@ class BashTool(BaseTool):
         if not output:
             return f"[{truncation_color}](no output)[/{truncation_color}]"
 
-        lines = output.split("\n")
-        hidden_lines = max(0, len(lines) - max_lines)
+        lines = [line for line in output.split("\n") if line != ""]
+        if not lines:
+            return f"[{truncation_color}](no output)[/{truncation_color}]"
+
         display_lines = lines[:max_lines]
+        hidden_lines = max(0, len(lines) - len(display_lines))
 
         formatted: list[str] = []
         for line in display_lines:
-            # Truncate long lines for UI display only
             if len(line) > max_line_chars:
                 visible = line[:max_line_chars].replace("[", "\\[")
                 hidden_chars = len(line) - max_line_chars
@@ -191,7 +194,7 @@ class BashTool(BaseTool):
 
         if hidden_lines > 0:
             formatted.append(
-                f"[{truncation_color}]... ({hidden_lines} more lines)[/{truncation_color}]"
+                f"[{truncation_color}]({hidden_lines} more lines)[/{truncation_color}]"
             )
 
         return "\n".join(formatted)
@@ -201,14 +204,14 @@ class BashTool(BaseTool):
     ) -> ToolResult:
         if not params.command.strip():
             msg = "Command cannot be empty"
-            return ToolResult(success=False, result=msg, display=f"[red]{msg}[/red]")
+            return ToolResult(success=False, result=msg, ui_summary=f"[red]{msg}[/red]")
 
         command = _transform_command(params.command)
 
         cwd = Path.cwd()
         if not cwd.exists():
             return ToolResult(
-                success=False, display=f"[red]Working directory does not exist: {cwd}[/red]"
+                success=False, ui_summary=f"[red]Working directory does not exist: {cwd}[/red]"
             )
 
         proc = None
@@ -243,7 +246,7 @@ class BashTool(BaseTool):
                         await _kill_process_tree(proc)
                         return ToolResult(
                             success=False,
-                            display=f"[red]Command timed out after {params.timeout}s[/red]",
+                            ui_summary=f"[red]Command timed out after {params.timeout}s[/red]",
                         )
 
                     if cancel_wait in done and cancel_event.is_set():
@@ -251,7 +254,7 @@ class BashTool(BaseTool):
                         return ToolResult(
                             success=False,
                             result="Command aborted",
-                            display="[yellow]Command aborted by user[/yellow]",
+                            ui_summary="[yellow]Command aborted by user[/yellow]",
                         )
 
                     stdout_bytes, stderr_bytes = comm_task.result()
@@ -263,7 +266,8 @@ class BashTool(BaseTool):
             except TimeoutError:
                 await _kill_process_tree(proc)
                 return ToolResult(
-                    success=False, display=f"[red]Command timed out after {params.timeout}s[/red]"
+                    success=False,
+                    ui_summary=f"[red]Command timed out after {params.timeout}s[/red]",
                 )
 
             stdout = _sanitize_output(stdout_bytes.decode("utf-8", errors="replace"))
@@ -288,19 +292,25 @@ class BashTool(BaseTool):
 
             result_text = trunc.content or "(no output)"
             display_text = self._format_display(trunc.content)
+            non_empty_lines = [line for line in (trunc.content or "").split("\n") if line.strip()]
+            is_single_line = len(non_empty_lines) <= 1
 
             if proc.returncode == 0:
-                return ToolResult(success=True, result=result_text, display=display_text)
+                if is_single_line:
+                    summary_line = display_text.replace("\n", " ").strip()
+                    return ToolResult(success=True, result=result_text, ui_summary=summary_line)
+                return ToolResult(success=True, result=result_text, ui_details=display_text)
             else:
                 return ToolResult(
                     success=False,
                     result=result_text,
-                    display=f"[red]Exit code {proc.returncode}[/red]\n{display_text}",
+                    ui_summary=f"[red]Exit code {proc.returncode}[/red]",
+                    ui_details=display_text,
                 )
 
         except Exception as e:
             msg = f"Error running command: {e}"
-            return ToolResult(success=False, result=msg, display=f"[red]{msg}[/red]")
+            return ToolResult(success=False, result=msg, ui_summary=f"[red]{msg}[/red]")
         finally:
             if proc is not None:
                 await _kill_process_tree(proc)

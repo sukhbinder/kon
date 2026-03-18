@@ -254,8 +254,18 @@ class ChatLog(VerticalScroll):
         self._scroll_if_anchored(animate=False)
         return block
 
-    def start_tool(self, name: str, tool_id: str, call_msg: str | None = None) -> ToolBlock:
-        block = ToolBlock(name=name, call_msg=call_msg)
+    def start_tool(
+        self, name: str, tool_id: str, call_msg: str | None = None, icon: str = "→"
+    ) -> ToolBlock:
+        block = ToolBlock(name=name, call_msg=call_msg, icon=icon)
+
+        # Consecutive tool calls without detail output render compactly (no
+        # margin). Tools with detail output (diffs, bash output, etc.) always
+        # keep a 1-line gap so they don't visually bleed into neighbours.
+        previous = self.children[-1] if self.children else None
+        if isinstance(previous, ToolBlock) and not previous.has_class("-with-details"):
+            block.add_class("-compact")
+
         self.mount(block)
         self._scroll_if_anchored(animate=False)
         self._tool_blocks[tool_id] = block
@@ -272,11 +282,24 @@ class ChatLog(VerticalScroll):
             self._scroll_if_anchored(animate=False)
 
     def set_tool_result(
-        self, tool_id: str, content: str, success: bool, markup: bool = True
+        self,
+        tool_id: str,
+        ui_summary: str | None,
+        ui_details: str | None,
+        success: bool,
+        markup: bool = True,
     ) -> None:
         block = self._tool_blocks.get(tool_id)
         if block:
-            block.set_result(content, success, markup=markup)
+            block.set_result(ui_summary, ui_details, success, markup=markup)
+            if ui_details:
+                # All ToolStartEvents arrive during streaming before any
+                # results, so later siblings were mounted compact.  Now that
+                # this block has detail output, the next tool needs its
+                # margin back so the detail block doesn't run into it.
+                next_sibling = block.next_sibling
+                if isinstance(next_sibling, ToolBlock):
+                    next_sibling.remove_class("-compact")
             self._scroll_if_anchored(animate=False)
 
     def update_tool_call_msg(self, tool_id: str, call_msg: str) -> None:

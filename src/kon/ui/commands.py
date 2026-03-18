@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from kon import config
+from kon import config, set_theme
 
 from ..core.compaction import generate_summary
 from ..core.handoff import generate_handoff_prompt
@@ -23,6 +23,7 @@ from ..llm import (
     openai_login,
 )
 from ..session import MessageEntry, Session
+from ..themes import get_theme_options
 from ..tools import DEFAULT_TOOLS, get_tools
 from .chat import ChatLog
 from .clipboard import copy_to_clipboard
@@ -66,6 +67,7 @@ class CommandsMixin:
         def _create_provider(self, api_type: ApiType, config: ProviderConfig) -> BaseProvider: ...
         def _sync_slash_commands(self) -> None: ...
         def _render_session_entries(self, session: Session) -> None: ...
+        def _apply_theme(self, theme_id: str) -> None: ...
 
     def _handle_command(self, text: str) -> bool:
         parts = text[1:].split(maxsplit=1)
@@ -86,6 +88,9 @@ class CommandsMixin:
             return True
         if cmd == "new":
             self._new_conversation()
+            return True
+        if cmd == "themes":
+            self._handle_themes_command(args)
             return True
         if cmd == "handoff":
             self._handle_handoff_command(args)
@@ -122,6 +127,7 @@ class CommandsMixin:
   /clear     - Clear conversation history
   /compact   - Compact current conversation now
   /model     - Change model (/model gpt-4o)
+  /themes    - Change UI theme (/themes gruvbox-dark)
   /new       - Start new conversation
   /handoff   - Start focused handoff in new session
   /resume    - Resume a session
@@ -195,6 +201,38 @@ Keybindings:
         input_box.set_completing(True)
         input_box.focus()
         self._selection_mode = SelectionMode.MODEL
+
+    def _handle_themes_command(self, args: str) -> None:
+        chat = self.query_one("#chat-log", ChatLog)
+
+        requested = args.strip()
+        if requested:
+            try:
+                self._select_theme(requested)
+            except ValueError as e:
+                chat.add_info_message(str(e), error=True)
+            return
+
+        items = [
+            ListItem(value=theme_id, label=label, description=theme_id)
+            for theme_id, label in get_theme_options()
+        ]
+
+        completion_list = self.query_one("#completion-list", FloatingList)
+        completion_list.show(items, searchable=True)
+
+        input_box = self.query_one("#input-box", InputBox)
+        input_box.clear()
+        input_box.set_autocomplete_enabled(False)
+        input_box.set_completing(True)
+        input_box.focus()
+        self._selection_mode = SelectionMode.THEME
+
+    def _select_theme(self, theme_id: str) -> None:
+        set_theme(theme_id)
+        self._apply_theme(theme_id)
+        chat = self.query_one("#chat-log", ChatLog)
+        chat.add_info_message(f"Theme changed to {theme_id}")
 
     def _select_model(self, model) -> None:
         chat = self.query_one("#chat-log", ChatLog)

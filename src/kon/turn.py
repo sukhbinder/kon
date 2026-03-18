@@ -198,7 +198,8 @@ async def _execute_tool(
             tool_call_id=tool_call.id,
             tool_name=tool_call.name,
             content=content,
-            display=result.display,
+            ui_summary=result.ui_summary,
+            ui_details=result.ui_details,
             is_error=not result.success,
             file_changes=result.file_changes,
         ), result.file_changes

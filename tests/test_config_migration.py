@@ -11,12 +11,11 @@ def test_old_config_is_migrated_and_backed_up(tmp_path, monkeypatch):
     config_file = config_dir / "config.toml"
     config_file.write_text(
         """
+[meta]
+config_version = 2
+
 [ui.colors]
 warning = "#123456"
-
-[ui.colors.compaction]
-bg = "#111111"
-label = "#222222"
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -27,12 +26,13 @@ label = "#222222"
     reset_config()
     cfg = get_config()
 
-    assert cfg.ui.colors.notice == "#123456"
-    assert cfg.ui.colors.badge.bg == "#111111"
-    assert cfg.ui.colors.badge.label == "#222222"
+    assert cfg.ui.theme == "gruvbox-dark"
+    assert cfg.ui.colors.notice == "#fe8019"
 
     updated = tomllib.loads(config_file.read_text(encoding="utf-8"))
     assert updated["meta"]["config_version"] == CURRENT_CONFIG_VERSION
+    assert updated["ui"]["theme"] == "gruvbox-dark"
+    assert "colors" not in updated["ui"]
 
     backup_files = list(config_dir.glob("config.toml.bak.*"))
     assert len(backup_files) == 1

@@ -11,7 +11,9 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, field_validator
+
+from .themes import ColorsConfig, get_theme, get_theme_ids
 
 CONFIG_DIR_NAME: str = ".kon"
 
@@ -33,37 +35,19 @@ class MetaConfig(BaseModel):
     config_version: int = CURRENT_CONFIG_VERSION
 
 
-class ToolBgConfig(BaseModel):
-    pending: str
-    success: str
-    error: str
-
-
-class BadgeColorConfig(BaseModel):
-    bg: str
-    label: str
-
-
-class ColorsConfig(BaseModel):
-    dim: str
-    muted: str
-    title: str
-    spinner: str
-    accent: str
-    info: str
-    markdown_heading: str
-    markdown_code: str
-    selected: str
-    error: str
-    notice: str
-    diff_added: str
-    diff_removed: str
-    tool_bg: ToolBgConfig
-    badge: BadgeColorConfig
-
-
 class UIConfig(BaseModel):
-    colors: ColorsConfig
+    theme: str = "gruvbox-dark"
+
+    @field_validator("theme")
+    @classmethod
+    def _validate_theme(cls, value: str) -> str:
+        if value not in get_theme_ids():
+            raise ValueError(f"Unknown theme: {value}")
+        return value
+
+    @property
+    def colors(self) -> ColorsConfig:
+        return get_theme(self.theme).colors
 
 
 class SystemPromptConfig(BaseModel):
@@ -142,13 +126,6 @@ class Config:
     @staticmethod
     def _apply_legacy_key_shims(data: dict[str, Any]) -> dict[str, Any]:
         normalized_data = deepcopy(data)
-
-        ui_colors = normalized_data.get("ui", {}).get("colors")
-        if isinstance(ui_colors, dict):
-            if "badge" not in ui_colors and isinstance(ui_colors.get("compaction"), dict):
-                ui_colors["badge"] = deepcopy(ui_colors["compaction"])
-            if "notice" not in ui_colors and isinstance(ui_colors.get("warning"), str):
-                ui_colors["notice"] = ui_colors["warning"]
 
         llm = normalized_data.get("llm")
         if isinstance(llm, dict):
@@ -264,6 +241,24 @@ def _migrate_v1_to_v2(data: dict[str, Any]) -> dict[str, Any]:
     return migrated
 
 
+def _migrate_v2_to_v3(data: dict[str, Any]) -> dict[str, Any]:
+    migrated = Config._apply_legacy_key_shims(data)
+    ui = migrated.get("ui")
+    if not isinstance(ui, dict):
+        ui = {}
+        migrated["ui"] = ui
+
+    ui["theme"] = "gruvbox-dark"
+    ui.pop("colors", None)
+
+    meta = migrated.get("meta")
+    if not isinstance(meta, dict):
+        migrated["meta"] = {"config_version": 3}
+    else:
+        meta["config_version"] = 3
+    return migrated
+
+
 def _migrate_config_data(data: dict[str, Any]) -> tuple[dict[str, Any], int, int, bool]:
     original = deepcopy(data)
     current_version = _get_config_version(original)
@@ -277,6 +272,10 @@ def _migrate_config_data(data: dict[str, Any]) -> tuple[dict[str, Any], int, int
         if current_version == 1:
             migrated = _migrate_v1_to_v2(migrated)
             current_version = 2
+            continue
+        if current_version == 2:
+            migrated = _migrate_v2_to_v3(migrated)
+            current_version = 3
             continue
         break
 
@@ -365,16 +364,19 @@ def update_available_binaries() -> None:
     AVAILABLE_BINARIES.update(_detect_available_binaries())
 
 
-def _load_config() -> Config:
-    config_file = _ensure_config_file()
-
+def _read_config_data(config_file: Path) -> dict[str, Any]:
     try:
-        data = tomllib.loads(config_file.read_text(encoding="utf-8"))
+        return tomllib.loads(config_file.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as exc:
         _record_config_warning(
             f"Invalid config at {config_file}: {exc}. Falling back to built-in defaults."
         )
-        data = {}
+        return {}
+
+
+def _load_config() -> Config:
+    config_file = _ensure_config_file()
+    data = _read_config_data(config_file)
 
     try:
         migrated_data, from_version, to_version, did_migrate = _migrate_config_data(data)
@@ -422,6 +424,30 @@ def reload_config() -> Config:
     cfg = _load_config()
     _config_var.set(cfg)
     return cfg
+
+
+def set_theme(theme: str) -> Config:
+    get_theme(theme)
+
+    config_file = _ensure_config_file()
+    data = _read_config_data(config_file)
+
+    ui = data.get("ui")
+    if not isinstance(ui, dict):
+        ui = {}
+        data["ui"] = ui
+
+    ui["theme"] = theme
+    ui.pop("colors", None)
+
+    meta = data.get("meta")
+    if not isinstance(meta, dict):
+        data["meta"] = {"config_version": CURRENT_CONFIG_VERSION}
+    else:
+        meta["config_version"] = CURRENT_CONFIG_VERSION
+
+    _atomic_write_text(config_file, _serialize_config_toml(data))
+    return reload_config()
 
 
 def reset_config() -> None:

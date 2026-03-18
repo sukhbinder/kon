@@ -54,7 +54,6 @@ class FloatingList[T](Widget):
     DEFAULT_CSS = """
     FloatingList {
         height: auto;
-        background: $surface;
         display: none;
         padding: 0 1;
     }

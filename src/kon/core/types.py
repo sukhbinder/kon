@@ -127,7 +127,8 @@ class ToolResultMessage(BaseModel):
     tool_call_id: str
     tool_name: str
     content: list[TextContent | ImageContent]
-    display: str | None = None  # Formatted for UI display (Rich markup supported)
+    ui_summary: str | None = None  # One-line UI text rendered on tool header line
+    ui_details: str | None = None  # Multiline UI text rendered below the header
     is_error: bool = False
     file_changes: FileChanges | None = None
 
@@ -162,5 +163,6 @@ class ToolResult(BaseModel):
     success: bool
     result: str | None = None  # Raw result (sent to LLM)
     images: list[ImageContent] | None = None  # Images to include in result
-    display: str | None = None  # Formatted for UI display (Rich markup supported)
+    ui_summary: str | None = None  # One-line UI text rendered on tool header line
+    ui_details: str | None = None  # Multiline UI text rendered below the header
     file_changes: FileChanges | None = None  # Track +/- lines for edit/write tools

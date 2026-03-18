@@ -18,6 +18,7 @@ class WriteParams(BaseModel):
 
 class WriteTool(BaseTool):
     name = "write"
+    tool_icon = "+"
     params = WriteParams
     description = (
         "Write content to a file. Creates the file if it doesn't exist, overwrites if it does. "
@@ -26,15 +27,7 @@ class WriteTool(BaseTool):
 
     def format_call(self, params: WriteParams) -> str:
         colors = config.ui.colors
-        header = f"[{colors.accent}]{shorten_path(params.path)}[/{colors.accent}]"
-        lines = params.content.splitlines()
-        preview = "\n".join(
-            f"[{colors.diff_added}]+{line.replace('[', '\\[')}[/{colors.diff_added}]"
-            for line in lines[:20]
-        )
-        if len(lines) > 20:
-            preview += f"\n[dim]... ({len(lines) - 20} more lines)[/dim]"
-        return f"{header}\n{preview}"
+        return f"[{colors.accent}]{shorten_path(params.path)}[/{colors.accent}]"
 
     async def execute(
         self, params: WriteParams, cancel_event: asyncio.Event | None = None
@@ -57,22 +50,21 @@ class WriteTool(BaseTool):
                 await f.write(params.content)
         except OSError as e:
             msg = f"Failed to write: {e}"
-            return ToolResult(success=False, result=msg, display=f"[red]{msg}[/red]")
+            return ToolResult(success=False, result=msg, ui_summary=f"[red]{msg}[/red]")
 
         n_lines = params.content.count("\n") + 1
-        short_path = shorten_path(str(file_path))
         diff_added = config.ui.colors.diff_added
 
         if file_existed:
             result = f"Overwrote {file_path} +{n_lines}"
-            display = f"[dim]Overwrote {short_path}[/dim] [{diff_added}]+{n_lines}[/{diff_added}]"
+            display = f"[{diff_added}]+{n_lines}[/{diff_added}]"
         else:
             result = f"Created {file_path} +{n_lines}"
-            display = f"[dim]Created {short_path}[/dim] [{diff_added}]+{n_lines}[/{diff_added}]"
+            display = f"[{diff_added}]+{n_lines}[/{diff_added}]"
 
         return ToolResult(
             success=True,
             result=result,
-            display=display,
+            ui_summary=display,
             file_changes=FileChanges(path=str(file_path), added=n_lines, removed=old_line_count),
         )

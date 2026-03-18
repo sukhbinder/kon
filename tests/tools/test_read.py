@@ -41,7 +41,7 @@ async def test_read_path_not_found(read_tool, tmp_path):
     result = await read_tool.execute(ReadParams(path=str(tmp_path / "nonexistent.txt")))
     assert not result.success
     assert "Path not found" in result.result
-    assert "Path not found" in result.display
+    assert "Path not found" in result.ui_summary
 
 
 @pytest.mark.asyncio
@@ -57,7 +57,7 @@ async def test_read_not_a_file(read_tool, tmp_path):
     result = await read_tool.execute(ReadParams(path=str(fifo_path)))
     assert not result.success
     assert "Path is not a file" in result.result
-    assert "Path is not a file" in result.display
+    assert "Path is not a file" in result.ui_summary
 
 
 @pytest.mark.asyncio
@@ -66,7 +66,7 @@ async def test_read_directory_runs_ls_and_appends_warning(read_tool, tmp_path, m
 
     async def mock_execute(self, params, cancel_event=None):
         called["command"] = params.command
-        return ToolResult(success=True, result="total 0", display="[dim]total 0[/dim]")
+        return ToolResult(success=True, result="total 0", ui_summary="[dim]total 0[/dim]")
 
     monkeypatch.setattr(BashTool, "execute", mock_execute)
 

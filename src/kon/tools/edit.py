@@ -164,6 +164,7 @@ def format_diff_display(diff: str) -> str:
 
 class EditTool(BaseTool):
     name = "edit"
+    tool_icon = "*"
     params = EditParams
     description = (
         "Edit a file by replacing exact text. The old_string must match exactly "
@@ -172,9 +173,7 @@ class EditTool(BaseTool):
 
     def format_call(self, params: EditParams) -> str:
         accent = config.ui.colors.accent
-        header = f"[{accent}]{shorten_path(params.path)}[/{accent}]"
-        diff, _, _ = generate_diff(params.old_string, params.new_string)
-        return f"{header}\n{format_diff_display(diff)}"
+        return f"[{accent}]{shorten_path(params.path)}[/{accent}]"
 
     async def execute(
         self, params: EditParams, cancel_event: asyncio.Event | None = None
@@ -183,14 +182,14 @@ class EditTool(BaseTool):
 
         if not file_path.exists():
             msg = f"File not found: {file_path}"
-            return ToolResult(success=False, result=msg, display=f"[red]{msg}[/red]")
+            return ToolResult(success=False, result=msg, ui_summary=f"[red]{msg}[/red]")
 
         async with aiofiles.open(file_path, encoding="utf-8") as f:
             content = await f.read()
 
         if params.old_string not in content:
             msg = "old_string not found in file"
-            return ToolResult(success=False, result=msg, display=f"[red]{msg}[/red]")
+            return ToolResult(success=False, result=msg, ui_summary=f"[red]{msg}[/red]")
 
         if params.replace_all:
             new_content = content.replace(params.old_string, params.new_string)
@@ -203,18 +202,17 @@ class EditTool(BaseTool):
         diff, added, removed = generate_diff(content, new_content)
         diff_display = format_diff_display(diff)
 
-        short_path = shorten_path(str(file_path))
         colors = config.ui.colors
         result = f"Updated {file_path} +{added} -{removed}"
-        display = (
-            f"[dim]Updated {short_path}[/dim] [{colors.diff_added}]+{added}[/{colors.diff_added}] "
+        ui_summary = (
+            f"[{colors.diff_added}]+{added}[/{colors.diff_added}] "
             f"[{colors.diff_removed}]-{removed}[/{colors.diff_removed}]"
         )
-        display += f"\n{diff_display}"
 
         return ToolResult(
             success=True,
             result=result,
-            display=display,
+            ui_summary=ui_summary,
+            ui_details=diff_display,
             file_changes=FileChanges(path=str(file_path), added=added, removed=removed),
         )

@@ -359,7 +359,7 @@ class StatusLine(Horizontal):
             result.append(str(spinner_text), style=spinner_color)
         else:
             result.append(str(spinner_text), style=spinner_color)
-        result.append(" Working...", style=dim_color)
+        result.append(" Working...", style=config.ui.colors.muted)
         result.append(" (esc to interrupt)", style=dim_color)
         if self._streaming_token_count > 20:
             result.append(f" ↓{self._streaming_token_count!s}", style=dim_color)

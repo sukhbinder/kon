@@ -11,6 +11,8 @@ Screen {{
     layout: grid;
     grid-size: 1;
     grid-rows: 1fr auto auto auto auto auto;
+    background: {colors.bg};
+    color: {colors.fg};
 }}
 
 #chat-log {{
@@ -18,6 +20,8 @@ Screen {{
     padding: 0 0 1 0;
     scrollbar-size: 0 0;
     align-vertical: bottom;
+    background: {colors.bg};
+    color: {colors.fg};
 }}
 
 /* Thinking block - dim, hidden by default */
@@ -58,12 +62,13 @@ Screen {{
 .user-block {{
     padding: 0 1;
     margin: 1 0 0 0;
-    border-top: solid grey;
-    border-bottom: solid grey;
+    border-top: solid {colors.border};
+    border-bottom: solid {colors.border};
+    background: {colors.panel_user};
 }}
 
 .user-block.skill-trigger-message {{
-    background: {colors.badge.bg};
+    background: {colors.panel_user};
 }}
 
 /* Update available message */
@@ -89,38 +94,47 @@ Screen {{
 
 /* Tool block */
 .tool-block {{
-    padding: 1 1;
+    padding: 0 1;
     margin-top: 1;
+    background: transparent;
 }}
 
-.tool-block.-pending {{
-    background: {colors.tool_bg.pending};
-    color: #c0c0d0;
+.tool-block.-compact {{
+    margin-top: 0;
 }}
 
-.tool-block.-approval {{
-    background: {colors.tool_bg.pending};
-    color: #c0c0d0;
-    border-left: thick {colors.accent};
-}}
-
-.tool-block.-success {{
-    background: {colors.tool_bg.success};
-    color: #c0d0c0;
-}}
-
+.tool-block.-pending,
+.tool-block.-approval,
+.tool-block.-success,
 .tool-block.-error {{
-    background: {colors.tool_bg.error};
-    color: #d0c0c0;
+    background: transparent;
+    color: {colors.dim};
+    border: none;
 }}
 
 #tool-header {{
-    /* Color handled by Rich Text inline styling for the symbol */
+    color: {colors.dim};
+    text-style: none;
+}}
+
+#tool-output,
+.tool-output {{
+    color: {colors.dim};
+    padding: 0 0 0 2;
+}}
+
+.tool-block.-with-details {{
+    padding: 0 1;
+}}
+
+#tool-output.-hidden {{
+    display: none;
+    height: 0;
 }}
 
 /* Compaction message */
 .compaction-message {{
-    background: {colors.badge.bg};
+    background: {colors.panel};
     padding: 1 1;
     margin-top: 1;
     width: 100%;
@@ -128,7 +142,7 @@ Screen {{
 
 /* Handoff link */
 .handoff-link-block {{
-    background: {colors.badge.bg};
+    background: {colors.panel};
     padding: 1 1;
     margin: 1 0 0 0;
     width: 100%;
@@ -182,6 +196,14 @@ Screen {{
 #exit-hint {{
     color: {colors.dim};
     width: auto;
+}}
+
+/* Input area */
+#input-box {{
+    border-top: solid {colors.border};
+    border-bottom: solid {colors.border};
+    border-title-color: {colors.dim};
+    border-subtitle-color: {colors.dim};
 }}
 
 /* Completion list - between input and info bar */

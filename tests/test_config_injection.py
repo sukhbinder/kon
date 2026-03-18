@@ -61,11 +61,11 @@ def test_config_injection_for_testing():
     """Test a common testing pattern: inject config, run test, restore."""
     original_dim = config.ui.colors.dim
 
-    test_config = Config({"ui": {"colors": {"dim": "#000000"}}})
+    test_config = Config({"ui": {"theme": "tokyo-night"}})
     set_config(test_config)
 
     try:
-        assert config.ui.colors.dim == "#000000"
+        assert config.ui.colors.dim == "#565f89"
     finally:
         reset_config()
 
@@ -77,7 +77,7 @@ def custom_config():
     """Fixture that provides a custom config and resets after test."""
     test_data = {
         "llm": {"default_model": "fixture-model", "default_thinking_level": "high"},
-        "ui": {"colors": {"accent": "#ff0000"}},
+        "ui": {"theme": "catppuccin-latte"},
     }
     test_config = Config(test_data)
     set_config(test_config)
@@ -89,4 +89,4 @@ def test_config_with_fixture(custom_config):
     """Test using a pytest fixture for config injection."""
     assert config.llm.default_model == "fixture-model"
     assert config.llm.default_thinking_level == "high"
-    assert config.ui.colors.accent == "#ff0000"
+    assert config.ui.colors.accent == "#1e66f5"

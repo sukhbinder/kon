@@ -24,6 +24,7 @@ class FindParams(BaseModel):
 
 class FindTool(BaseTool):
     name = "find"
+    tool_icon = "*"
     params = FindParams
     mutating = False
     description = (
@@ -47,7 +48,7 @@ class FindTool(BaseTool):
         fd_path = await ensure_tool("fd", silent=True)
         if not fd_path:
             msg = "fd is not available and could not be downloaded"
-            return ToolResult(success=False, result=msg, display=f"[red]{msg}[/red]")
+            return ToolResult(success=False, result=msg, ui_summary=f"[red]{msg}[/red]")
 
         search_path = params.path or os.getcwd()
         if not os.path.isabs(search_path):
@@ -55,7 +56,7 @@ class FindTool(BaseTool):
 
         if not os.path.exists(search_path):
             msg = f"Path not found: {search_path}"
-            return ToolResult(success=False, result=msg, display=f"[red]{msg}[/red]")
+            return ToolResult(success=False, result=msg, ui_summary=f"[red]{msg}[/red]")
 
         args = [
             fd_path,
@@ -93,13 +94,13 @@ class FindTool(BaseTool):
 
         if exit_code not in (0, 1) and not output:
             msg = f"fd failed: {error_output}"
-            return ToolResult(success=False, result=msg, display=f"[red]{msg}[/red]")
+            return ToolResult(success=False, result=msg, ui_summary=f"[red]{msg}[/red]")
 
         if not output:
             return ToolResult(
                 success=True,
                 result="No files found matching pattern",
-                display="[dim]No files found[/dim]",
+                ui_summary="[dim]No files found[/dim]",
             )
 
         lines = [line.strip() for line in output.split("\n") if line.strip()]
@@ -134,6 +135,6 @@ class FindTool(BaseTool):
             result_text = result_text[: MAX_OUTPUT_BYTES // 2] + "\n\n[output truncated]"
 
         count = len(relativized)
-        display = f"[dim]{count} files found[/dim]"
+        display = f"[dim]({count} files)[/dim]"
 
-        return ToolResult(success=True, result=result_text, display=display)
+        return ToolResult(success=True, result=result_text, ui_summary=display)

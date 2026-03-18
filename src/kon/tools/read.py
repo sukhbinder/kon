@@ -33,6 +33,7 @@ class ReadParams(BaseModel):
 
 class ReadTool(BaseTool):
     name = "read"
+    tool_icon = "→"
     params = ReadParams
     mutating = False
     description = (
@@ -82,7 +83,7 @@ class ReadTool(BaseTool):
 
         if not file_path.exists():
             msg = "Path not found"
-            return ToolResult(success=False, result=msg, display=f"[red]{msg}[/red]")
+            return ToolResult(success=False, result=msg, ui_summary=f"[red]{msg}[/red]")
 
         if not file_path.is_file():
             if file_path.is_dir():
@@ -98,10 +99,11 @@ class ReadTool(BaseTool):
                 return ToolResult(
                     success=ls_result.success,
                     result=f"{output}{warning}",
-                    display=ls_result.display,
+                    ui_summary=ls_result.ui_summary,
+                    ui_details=ls_result.ui_details,
                 )
             msg = "Path is not a file"
-            return ToolResult(success=False, result=msg, display=f"[red]{msg}[/red]")
+            return ToolResult(success=False, result=msg, ui_summary=f"[red]{msg}[/red]")
 
         if is_image_file(str(file_path)):
             try:
@@ -119,19 +121,19 @@ class ReadTool(BaseTool):
                     success=True,
                     result=text_note,
                     images=[ImageContent(data=base64_data, mime_type=mime_type)],
-                    display=display_note,
+                    ui_summary=display_note,
                 )
             except Exception as e:
                 msg = f"Failed to read image: {e}"
-                return ToolResult(success=False, result=msg, display=f"[red]{msg}[/red]")
+                return ToolResult(success=False, result=msg, ui_summary=f"[red]{msg}[/red]")
 
         try:
             content = await self.read_file(file_path, params.offset, params.limit)
         except OSError as e:
             msg = f"Failed to read: {e}"
-            return ToolResult(success=False, result=msg, display=f"[red]{msg}[/red]")
+            return ToolResult(success=False, result=msg, ui_summary=f"[red]{msg}[/red]")
 
         lines_read = len(content.splitlines()) if content else 0
         return ToolResult(
-            success=True, result=content, display=f"[dim]Read {lines_read} lines[/dim]"
+            success=True, result=content, ui_summary=f"[dim]({lines_read} lines)[/dim]"
         )

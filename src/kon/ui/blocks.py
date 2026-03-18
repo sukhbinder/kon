@@ -84,7 +84,7 @@ class ThinkingBlock(_StreamingMarkdownMixin, Static):
 
     def compose(self) -> ComposeResult:
         if self._finalized and self._content:
-            yield Label(format_markdown(self._content), id="thinking-content", markup=False)
+            yield Label(self._format_collapsed(), id="thinking-content", markup=False)
         else:
             yield Label(self._content, id="thinking-content", markup=False)
 
@@ -93,6 +93,16 @@ class ThinkingBlock(_StreamingMarkdownMixin, Static):
         if self._label is None:
             self._label = self.query_one("#thinking-content", Label)
         return self._label
+
+    def _format_collapsed(self) -> Text:
+        """Show only the first line with a truncation indicator."""
+        lines = self._content.strip().split("\n")
+        first_line = lines[0].strip() if lines else ""
+        dim_style = config.ui.colors.dim
+        text = Text(first_line, style=dim_style)
+        if len(lines) > 1:
+            text.append(f" ... ({len(lines) - 1} more lines)", style=dim_style)
+        return text
 
     async def append(self, text: str) -> None:
         self._content += text
@@ -105,12 +115,12 @@ class ThinkingBlock(_StreamingMarkdownMixin, Static):
 
     def _do_finalize(self) -> None:
         if self._content:
-            self.label.update(format_markdown(self._content))
+            self.label.update(self._format_collapsed())
 
     def set_content(self, text: str) -> None:
         self._content = text
         self._finalized = True
-        self.label.update(format_markdown(self._content))
+        self.label.update(self._format_collapsed())
 
 
 class ContentBlock(_StreamingMarkdownMixin, Static):
@@ -175,11 +185,15 @@ class ToolBlock(Static):
     can_focus = False
     MAX_HEADER_LINES = 2
 
-    def __init__(self, name: str = "", call_msg: str | None = None, **kwargs) -> None:
+    def __init__(
+        self, name: str = "", call_msg: str | None = None, icon: str = "→", **kwargs
+    ) -> None:
         super().__init__(**kwargs)
         self._name = name
+        self._icon = icon
         self._call_msg = call_msg
-        self._result: str | None = None
+        self._ui_summary: str | None = None
+        self._ui_details: str | None = None
         self._success: bool | None = None
         self._awaiting_approval: bool = False
         self.add_class("tool-block")
@@ -187,34 +201,55 @@ class ToolBlock(Static):
 
     def compose(self) -> ComposeResult:
         yield Label(self._format_header(), id="tool-header")
-        yield Label(self._format_pending_output(), id="tool-output")
+        yield Label("", id="tool-output", classes="tool-output -hidden")
 
     def _format_header(self, truncate: bool = True) -> Text:
+        colors = config.ui.colors
         result = Text()
         formatted_name = " ".join(word.capitalize() for word in self._name.split("_"))
-        result.append(formatted_name, style="bold")
+
+        icon_style = colors.dim
+        name_style = colors.dim
+        if self._success is None:
+            icon_style = colors.running
+            name_style = colors.running
+        elif self._success is False:
+            icon_style = colors.failed
+            name_style = colors.failed
+
+        result.append(f"{self._icon} ", style=icon_style)
+        result.append(formatted_name, style=name_style)
+
         if self._call_msg:
             result.append(" ")
             result.append_text(self._format_call_msg(truncate=truncate))
+
+        if self._ui_summary:
+            result.append(" ")
+            summary = self._render_markup_safe(self._ui_summary)
+            result.append_text(summary)
+
+        if self._success is None and not self._awaiting_approval and not self._call_msg:
+            result.append(" ...", style=colors.dim)
+
         return result
 
     def _format_call_msg(self, truncate: bool = True) -> Text:
         if not self._call_msg:
             return Text()
-        if not truncate:
-            return self._render_markup_safe(self._call_msg)
-        if self._result is not None:
-            return self._render_markup_safe(self._call_msg.split("\n")[0])
-        lines = self._call_msg.split("\n")
-        if len(lines) > self.MAX_HEADER_LINES:
-            display_msg = "\n".join(lines[: self.MAX_HEADER_LINES])
-            display_msg += f"\n... ({len(lines) - self.MAX_HEADER_LINES} more lines)"
-            return self._render_markup_safe(display_msg)
-        return self._render_markup_safe(self._call_msg)
 
-    def _format_pending_output(self) -> Text:
-        dim_color = config.ui.colors.dim
-        return Text("...", style=dim_color)
+        if truncate:
+            lines = self._call_msg.split("\n")
+            if len(lines) > self.MAX_HEADER_LINES:
+                content = "\n".join(lines[: self.MAX_HEADER_LINES])
+                content += f"\n... ({len(lines) - self.MAX_HEADER_LINES} more lines)"
+            else:
+                content = self._call_msg
+        else:
+            content = self._call_msg
+
+        rendered = self._render_markup_safe(content)
+        return Text(rendered.plain, style=config.ui.colors.muted)
 
     def _render_markup_safe(self, content: str) -> Text:
         try:
@@ -248,13 +283,21 @@ class ToolBlock(Static):
         self._awaiting_approval = True
         self._set_state(None)
         self.query_one("#tool-header", Label).update(self._format_header(truncate=False))
-        self.query_one("#tool-output", Label).update(self._format_approval_controls())
+        output = self.query_one("#tool-output", Label)
+        self.remove_class("-with-details")
+        output.remove_class("-hidden")
+        output.remove_class("-details")
+        output.update(self._format_approval_controls())
 
     def hide_approval(self) -> None:
         self._awaiting_approval = False
         self._set_state(None)
         self.query_one("#tool-header", Label).update(self._format_header())
-        self.query_one("#tool-output", Label).update(self._format_pending_output())
+        output = self.query_one("#tool-output", Label)
+        self.remove_class("-with-details")
+        output.remove_class("-details")
+        output.add_class("-hidden")
+        output.update(Text(""))
 
     def _format_approval_controls(self) -> Text:
         accent_style = f"{config.ui.colors.accent} bold"
@@ -270,15 +313,31 @@ class ToolBlock(Static):
         self._call_msg = call_msg
         self.query_one("#tool-header", Label).update(self._format_header())
 
-    def set_result(self, content: str, success: bool, markup: bool = True) -> None:
-        self._result = content
+    def set_result(
+        self, ui_summary: str | None, ui_details: str | None, success: bool, markup: bool = True
+    ) -> None:
+        self._ui_summary = ui_summary
+        self._ui_details = ui_details
         self._success = success
         self._awaiting_approval = False
         self._set_state(success)
 
-        # Parse Rich markup for colored output (tools control their own truncation/styling)
-        rendered = self._render_markup_safe(content) if markup else Text(content)
-        self.query_one("#tool-output", Label).update(rendered)
+        output = self.query_one("#tool-output", Label)
+        if ui_details:
+            rendered = self._render_markup_safe(ui_details) if markup else Text(ui_details)
+            # Detail blocks need a 1-line gap; drop compact spacing that was
+            # applied before we knew this tool would have output.
+            self.remove_class("-compact")
+            self.add_class("-with-details")
+            output.remove_class("-hidden")
+            output.remove_class("-details")
+            output.update(rendered)
+        else:
+            output.update(Text(""))
+            self.remove_class("-with-details")
+            output.remove_class("-details")
+            output.add_class("-hidden")
+
         self.query_one("#tool-header", Label).update(self._format_header())
 
 

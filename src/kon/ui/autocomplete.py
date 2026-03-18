@@ -363,6 +363,7 @@ DEFAULT_COMMANDS = [
     SlashCommand("quit", "Quit the application", "ctrl+c,c"),
     SlashCommand("clear", "Clear conversation history"),
     SlashCommand("model", "Change model"),
+    SlashCommand("themes", "Change UI theme"),
     SlashCommand("new", "Start new conversation"),
     SlashCommand("handoff", "Start focused handoff in new session", submit_on_select=False),
     SlashCommand("resume", "Resume a session"),

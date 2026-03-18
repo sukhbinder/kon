@@ -28,6 +28,7 @@ class GrepParams(BaseModel):
 
 class GrepTool(BaseTool):
     name = "grep"
+    tool_icon = "*"
     params = GrepParams
     mutating = False
     description = (
@@ -52,7 +53,7 @@ class GrepTool(BaseTool):
         rg_path = await ensure_tool("rg", silent=True)
         if not rg_path:
             msg = "ripgrep (rg) is not available and could not be downloaded"
-            return ToolResult(success=False, result=msg, display=f"[red]{msg}[/red]")
+            return ToolResult(success=False, result=msg, ui_summary=f"[red]{msg}[/red]")
 
         search_path = params.path or os.getcwd()
         if not os.path.isabs(search_path):
@@ -60,7 +61,7 @@ class GrepTool(BaseTool):
 
         if not os.path.exists(search_path):
             msg = f"Path not found: {search_path}"
-            return ToolResult(success=False, result=msg, display=f"[red]{msg}[/red]")
+            return ToolResult(success=False, result=msg, ui_summary=f"[red]{msg}[/red]")
 
         args = [
             rg_path,
@@ -102,12 +103,12 @@ class GrepTool(BaseTool):
         # Exit codes: 0 = matches, 1 = no matches, 2 = errors (may still have matches)
         if exit_code == 1 or (exit_code == 2 and not output.strip()):
             return ToolResult(
-                success=True, result="No matches found", display="[dim]No matches found[/dim]"
+                success=True, result="No matches found", ui_summary="[dim]No matches found[/dim]"
             )
 
         if exit_code not in (0, 2):
             msg = f"ripgrep failed: {error_output}"
-            return ToolResult(success=False, result=msg, display=f"[red]{msg}[/red]")
+            return ToolResult(success=False, result=msg, ui_summary=f"[red]{msg}[/red]")
 
         lines = output.strip().split("\n")
         matches = []
@@ -135,7 +136,7 @@ class GrepTool(BaseTool):
 
         if not matches:
             return ToolResult(
-                success=True, result="No matches found", display="[dim]No matches found[/dim]"
+                success=True, result="No matches found", ui_summary="[dim]No matches found[/dim]"
             )
 
         total_matches = len(lines)
@@ -167,6 +168,6 @@ class GrepTool(BaseTool):
             result_text = result_text[: MAX_OUTPUT_BYTES // 2] + "\n\n[output truncated]"
 
         match_count = min(total_matches, MAX_MATCHES)
-        display = f"[dim]{match_count} matches[/dim]"
+        display = f"[dim]({match_count} matches)[/dim]"
 
-        return ToolResult(success=True, result=result_text, display=display)
+        return ToolResult(success=True, result=result_text, ui_summary=display)

@@ -8,6 +8,7 @@ from kon.config import (
     reload_config,
     reset_config,
     set_config,
+    set_theme,
     update_available_binaries,
 )
 from kon.shared import escape_xml
@@ -34,5 +35,6 @@ __all__ = [
     "reload_config",
     "reset_config",
     "set_config",
+    "set_theme",
     "update_available_binaries",
 ]

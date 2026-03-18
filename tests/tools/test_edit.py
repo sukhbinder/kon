@@ -50,7 +50,7 @@ async def test_edit_not_found(edit_tool, text_file):
     )
     assert not result.success
     assert "not found" in result.result
-    assert "not found" in result.display
+    assert "not found" in result.ui_summary
 
 
 @pytest.mark.asyncio
@@ -62,7 +62,7 @@ async def test_edit_file_not_found(edit_tool, tmp_path):
     )
     assert not result.success
     assert "File not found" in result.result
-    assert "File not found" in result.display
+    assert "File not found" in result.ui_summary
 
 
 @pytest.mark.asyncio

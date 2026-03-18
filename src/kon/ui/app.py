@@ -58,7 +58,7 @@ from ..llm import (
 from ..loop import Agent
 from ..permissions import ApprovalResponse
 from ..session import Session
-from ..tools import DEFAULT_TOOLS, get_tools
+from ..tools import DEFAULT_TOOLS, get_tool, get_tools
 from ..update_check import get_newer_pypi_version
 from .autocomplete import DEFAULT_COMMANDS, FilePathProvider, SlashCommand, SlashCommandProvider
 from .blocks import HandoffLinkBlock, LaunchWarning
@@ -68,7 +68,7 @@ from .floating_list import FloatingList
 from .input import InputBox
 from .selection_mode import SelectionMode
 from .session_ui import SessionUIMixin
-from .styles import STYLES
+from .styles import get_styles
 from .widgets import InfoBar, QueueDisplay, StatusLine, format_path
 
 
@@ -109,7 +109,7 @@ def _default_base_url_for_api(api_type: ApiType) -> str | None:
 
 
 class Kon(CommandsMixin, SessionUIMixin, App[None]):
-    CSS = STYLES
+    CSS = get_styles()
     TITLE = "kon"
     VERSION = VERSION
 
@@ -189,6 +189,10 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
             hide_thinking=self._hide_thinking,
             id="info-bar",
         )
+
+    def _apply_theme(self, theme_id: str) -> None:
+        type(self).CSS = get_styles()
+        self.refresh_css(animate=False)
 
     def _sync_slash_commands(self) -> None:
         input_box = self.query_one("#input-box", InputBox)
@@ -531,6 +535,8 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
                     self.run_worker(self._load_session(item.value.path), exclusive=True)
                 case SelectionMode.MODEL:
                     self._select_model(item.value)
+                case SelectionMode.THEME:
+                    self._select_theme(item.value)
                 case SelectionMode.LOGIN:
                     self._select_login_provider(item.value)
                 case SelectionMode.LOGOUT:
@@ -845,7 +851,9 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
                         case ToolStartEvent(tool_call_id=id, tool_name=name):
                             if self._current_block_type:
                                 chat.end_block()
-                            chat.start_tool(name, id, "")
+                            tool = get_tool(name)
+                            icon = tool.tool_icon if tool else "→"
+                            chat.start_tool(name, id, "", icon=icon)
                             self._current_block_type = "tool_call"
                             status.increment_tool_calls()
                             status.set_streaming_tokens(0)  # Reset token count for new tool
@@ -865,17 +873,16 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
                             self._approval_future = None
                             self._approval_tool_id = None
                             if r:
-                                if r.display:
-                                    text = r.display
-                                    markup = True
-                                elif r.content:
-                                    text = self._format_tool_result_text(r)
-                                    markup = False
-                                else:
-                                    text = ""
+                                markup = True
+                                ui_summary = r.ui_summary
+                                ui_details = r.ui_details
+                                if ui_summary is None and ui_details is None and r.content:
+                                    ui_details = self._format_tool_result_text(r)
                                     markup = False
                                 success = not r.is_error
-                                chat.set_tool_result(id, text, success, markup=markup)
+                                chat.set_tool_result(
+                                    id, ui_summary, ui_details, success, markup=markup
+                                )
                             if fc:
                                 info_bar.update_file_changes(fc.path, fc.added, fc.removed)
 

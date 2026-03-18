@@ -225,8 +225,8 @@ def _print_conversation(console: Console, session: Session, tools: list[BaseTool
 
             elif isinstance(msg, ToolResultMessage):
                 # Same as ToolBlock.set_result path in _render_session_entries
-                if msg.display:
-                    result_text = msg.display
+                if msg.ui_details:
+                    result_text = msg.ui_details
                     markup = True
                 else:
                     parts = [p.text for p in msg.content if isinstance(p, TextContent)]

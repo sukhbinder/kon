@@ -444,16 +444,13 @@ class TestCompactionConfig:
 
     def test_badge_colors_default(self):
         cfg = Config({})
-        assert cfg.ui.colors.info == "#ffff00"
-        assert cfg.ui.colors.notice == "#e5c07b"
-        assert cfg.ui.colors.badge.bg == "#2d2838"
-        assert cfg.ui.colors.badge.label == "#9575cd"
+        assert cfg.ui.colors.info == "#fabd2f"
+        assert cfg.ui.colors.notice == "#fe8019"
+        assert cfg.ui.colors.badge.bg == "#3c3836"
+        assert cfg.ui.colors.badge.label == "#d3869b"
 
-    def test_compaction_colors_legacy_alias_still_supported(self):
-        cfg = Config({"ui": {"colors": {"compaction": {"bg": "#111111", "label": "#222222"}}}})
-        assert cfg.ui.colors.badge.bg == "#111111"
-        assert cfg.ui.colors.badge.label == "#222222"
-
-    def test_notice_color_legacy_warning_alias_still_supported(self):
-        cfg = Config({"ui": {"colors": {"warning": "#ffaa00"}}})
-        assert cfg.ui.colors.notice == "#ffaa00"
+    def test_theme_selection_changes_palette(self):
+        cfg = Config({"ui": {"theme": "one-light"}})
+        assert cfg.ui.theme == "one-light"
+        assert cfg.ui.colors.bg == "#fafafa"
+        assert cfg.ui.colors.accent == "#4078f2"

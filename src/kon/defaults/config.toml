@@ -1,15 +1,15 @@
 [meta]
-config_version = 2
+config_version = 3
 
 [llm]
 default_provider = "openai-codex" # "zhipu", "github-copilot", "openai-codex"
-default_model = "gpt-5.4"
+default_model = "gpt-5.3-codex"
 default_base_url = ""
-default_thinking_level = "high"
-tool_call_idle_timeout_seconds = 120
+default_thinking_level = "medium"
+tool_call_idle_timeout_seconds = 180
 
 [llm.system_prompt]
-git_context = false
+git_context = true
 content = """You are an expert coding assistant called `Kon`.
 You help users by reading, searching, executing commands, editing code, and writing new files.
 
@@ -34,29 +34,8 @@ buffer_tokens = 20000
 max_turns = 500
 default_context_window = 200000
 
-[ui.colors]
-dim = "#666666"
-muted = "#808080"
-title = "#d97706"
-spinner = "#d97706"
-accent = "#8ABEB7"
-info = "#ffff00"
-markdown_heading = "#f0c674"
-markdown_code = "#689d6a"
-selected = "#689d6a"
-error = "#e06c75"
-notice = "#e5c07b"
-diff_added = "#b5bd68"
-diff_removed = "#cc6666"
-
-[ui.colors.tool_bg]
-pending = "#282832"
-success = "#283228"
-error = "#3c2828"
-
-[ui.colors.badge]
-bg = "#2d2838"
-label = "#9575cd"
+[ui]
+theme = "gruvbox-dark"
 
 [permissions]
 mode = "prompt"   # "prompt" or "auto"

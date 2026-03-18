@@ -15,7 +15,7 @@ from ..core.types import (
 )
 from ..llm import ApiType, BaseProvider, ProviderConfig, get_max_tokens, get_model
 from ..session import CompactionEntry, CustomMessageEntry, MessageEntry, Session
-from ..tools import tools_by_name
+from ..tools import get_tool, tools_by_name
 from .chat import ChatLog
 from .commands import CommandsMixin
 from .input import InputBox
@@ -105,22 +105,28 @@ class SessionUIMixin:
                                 block.add_class("-hidden")
                         elif isinstance(part, ToolCall):
                             call_msg = self._format_tool_call(part)
-                            chat.start_tool(part.name, part.id, call_msg)
+                            tool = get_tool(part.name)
+                            icon = tool.tool_icon if tool else "→"
+                            chat.start_tool(part.name, part.id, call_msg, icon=icon)
                             started_tools.add(part.id)
                 elif isinstance(message, ToolResultMessage):
                     tool_id = message.tool_call_id
                     if tool_id not in started_tools:
-                        chat.start_tool(message.tool_name, tool_id, "")
+                        tool = get_tool(message.tool_name)
+                        icon = tool.tool_icon if tool else "→"
+                        chat.start_tool(message.tool_name, tool_id, "", icon=icon)
                         started_tools.add(tool_id)
 
-                    if message.display:
-                        result_text = message.display
-                        markup = True
-                    else:
-                        result_text = self._format_tool_result_text(message)
+                    markup = True
+                    ui_summary = message.ui_summary
+                    ui_details = message.ui_details
+                    if ui_summary is None and ui_details is None:
+                        ui_details = self._format_tool_result_text(message)
                         markup = False
 
-                    chat.set_tool_result(tool_id, result_text, not message.is_error, markup=markup)
+                    chat.set_tool_result(
+                        tool_id, ui_summary, ui_details, not message.is_error, markup=markup
+                    )
             elif isinstance(entry, CompactionEntry):
                 chat.add_compaction_message(entry.tokens_before)
             elif isinstance(entry, CustomMessageEntry):

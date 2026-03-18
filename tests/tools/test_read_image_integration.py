@@ -41,4 +41,4 @@ async def test_read_image_file_invalid(read_tool, tmp_path):
 
     assert not result.success
     assert "Failed to read image" in result.result
-    assert "Failed to read image" in result.display
+    assert "Failed to read image" in result.ui_summary
