@@ -34,6 +34,9 @@ buffer_tokens = 20000
 max_turns = 500
 default_context_window = 200000
 
+[tools]
+extra = []
+
 [ui]
 theme = "gruvbox-dark"
 
