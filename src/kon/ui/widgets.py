@@ -341,6 +341,7 @@ class StatusLine(Horizontal):
         self._tool_calls = 0
         self._show_exit_hint = False
         self._streaming_token_count = 0
+        self._run_tps: float | None = None
         self.add_class("status-line")
 
     def compose(self) -> ComposeResult:
@@ -375,7 +376,10 @@ class StatusLine(Horizontal):
 
         dim_color = config.ui.colors.dim
         result = Text()
-        result.append(f"{elapsed_str} • {self._tool_calls}x", style=dim_color)
+        status = f"{elapsed_str} • {self._tool_calls}x"
+        if self._run_tps is not None:
+            status += f" • {round(self._run_tps)} tok/s"
+        result.append(status, style=dim_color)
         return result
 
     def _update_spinner(self) -> None:
@@ -397,6 +401,7 @@ class StatusLine(Horizontal):
                 self._start_time = time.time()
                 self._tool_calls = 0
                 self._streaming_token_count = 0
+                self._run_tps = None
             self.query_one("#status-text", Label).update(self._render_spinner())
 
     def increment_tool_calls(self) -> None:
@@ -405,6 +410,9 @@ class StatusLine(Horizontal):
     def set_streaming_tokens(self, token_count: int) -> None:
         self._streaming_token_count = token_count
         self._update_spinner()
+
+    def set_run_tps(self, tps: float | None) -> None:
+        self._run_tps = tps
 
     def show_exit_hint(self) -> None:
         self._show_exit_hint = True
@@ -424,6 +432,7 @@ class StatusLine(Horizontal):
     def reset(self) -> None:
         self._start_time = None
         self._tool_calls = 0
+        self._run_tps = None
         self._show_exit_hint = False
         self.query_one("#status-text", Label).update("")
         self.query_one("#exit-hint", Label).update("")

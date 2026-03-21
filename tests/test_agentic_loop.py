@@ -80,6 +80,11 @@ async def test_agent_default_scenario(tools, in_memory_session, max_turns_one):
     assert tool_starts[0].tool_name == "read"
     assert tool_starts[1].tool_name == "bash"
 
+    turn_end = next(e for e in events if isinstance(e, TurnEndEvent))
+    assert turn_end.generation_seconds is not None
+    assert turn_end.generation_seconds > 0
+    assert turn_end.tool_call_count == 2
+
     # Check final state
     assert len(in_memory_session.messages) == 4  # user + assistant + 2 tool_results
 
@@ -103,6 +108,12 @@ async def test_agent_simple_text_scenario(tools, in_memory_session):
     assert isinstance(events[4], TextEndEvent)
     assert isinstance(events[5], TurnEndEvent)
     assert isinstance(events[6], AgentEndEvent)
+
+    turn_end = events[5]
+    assert isinstance(turn_end, TurnEndEvent)
+    assert turn_end.generation_seconds is not None
+    assert turn_end.generation_seconds > 0
+    assert turn_end.tool_call_count == 0
 
     # Check final state
     assert events[6].stop_reason == StopReason.STOP
