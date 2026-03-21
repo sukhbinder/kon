@@ -324,6 +324,25 @@ description: Global version
         )
         assert collision.message == expected
 
+    def test_skips_duplicate_global_dir_when_cwd_is_home(self, tmp_path, monkeypatch):
+        home_dir = tmp_path / "home"
+        skill_dir = home_dir / ".kon" / "skills" / "noc"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("""---
+name: noc
+description: Planning-only mode
+---
+""")
+
+        monkeypatch.setattr("kon.context.skills.get_config_dir", lambda: home_dir / ".kon")
+
+        result = load_skills(str(home_dir))
+
+        assert len(result.skills) == 1
+        assert result.skills[0].name == "noc"
+        assert result.skills[0].path == str(skill_dir / "SKILL.md")
+        assert result.warnings == []
+
     def test_empty_when_no_skill_directories(self, tmp_path, monkeypatch):
         repo = tmp_path / "repo"
         repo.mkdir()

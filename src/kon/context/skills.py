@@ -218,8 +218,12 @@ def load_skills(cwd: str | None = None) -> LoadSkillsResult:
             else:
                 skill_map[skill.name] = skill
 
-    add_skills(_load_skills_from_dir(resolved_cwd / CONFIG_DIR_NAME / "skills"))
-    add_skills(_load_skills_from_dir(get_config_dir() / "skills"))
+    local_skills_dir = (resolved_cwd / CONFIG_DIR_NAME / "skills").resolve(strict=False)
+    global_skills_dir = (get_config_dir() / "skills").resolve(strict=False)
+
+    add_skills(_load_skills_from_dir(local_skills_dir))
+    if global_skills_dir != local_skills_dir:
+        add_skills(_load_skills_from_dir(global_skills_dir))
 
     return LoadSkillsResult(skills=list(skill_map.values()), warnings=all_warnings)
 
