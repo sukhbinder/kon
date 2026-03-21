@@ -11,7 +11,7 @@ from kon.config import (
     set_theme,
     update_available_binaries,
 )
-from kon.shared import escape_xml
+from kon.context._xml import escape_xml
 
 
 class _ConfigProxy:

@@ -6,8 +6,8 @@ import aiofiles
 from pydantic import BaseModel, Field
 
 from ..core.types import ImageContent
-from ..shared import shorten_path
 from ._read_image import is_image_file, read_and_process_image
+from ._tool_utils import shorten_path
 from .base import BaseTool, ToolResult
 from .bash import BashParams, BashTool
 

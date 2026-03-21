@@ -9,7 +9,8 @@ Discovers AGENTS.md (or CLAUDE.md) files from:
 from dataclasses import dataclass
 from pathlib import Path
 
-from .. import escape_xml, get_config_dir
+from .. import get_config_dir
+from ._xml import escape_xml
 
 CONTEXT_FILE_CANDIDATES = ["AGENTS.md", "CLAUDE.md"]
 

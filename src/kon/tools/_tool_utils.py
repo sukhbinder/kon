@@ -1,4 +1,5 @@
 import asyncio
+import os
 from contextlib import suppress
 from typing import TypeVar
 
@@ -73,6 +74,13 @@ async def communicate_or_cancel(
             cancel.cancel()
             with suppress(asyncio.CancelledError):
                 await cancel
+
+
+def shorten_path(path: str) -> str:
+    home = os.path.expanduser("~")
+    if path.startswith(home):
+        return "~" + path[len(home) :]
+    return path
 
 
 def truncate_lines_by_bytes(

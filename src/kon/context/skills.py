@@ -14,7 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .. import CONFIG_DIR_NAME, escape_xml, get_config_dir
+from .. import CONFIG_DIR_NAME, get_config_dir
+from ._xml import escape_xml
 
 MAX_NAME_LENGTH = 64
 MAX_DESCRIPTION_LENGTH = 1024

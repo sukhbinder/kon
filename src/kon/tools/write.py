@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from kon import config
 
 from ..core.types import FileChanges
-from ..shared import shorten_path
+from ._tool_utils import shorten_path
 from .base import BaseTool, ToolResult
 
 
