@@ -254,6 +254,7 @@ Type `/` at the start of the input box to see available commands.
 | `/logout` | Remove provider credentials |
 | `/clear` | Clear the current conversation |
 | `/help` | Show help and keybindings |
+| `/<custom>` | Custom skills registered as slash commands, shown in the /cmd popup for manual triggering |
 | `/quit` (`/exit`, `/q`) | Quit Kon |
 
 ### Themes
@@ -360,7 +361,7 @@ Example:
 ---
 name: my-skill
 description: Brief description of what this skill does
-register_cmd: true
+register_cmd: true  # also registers the skill in the /cmd popup for manual triggering
 cmd_info: Quick action shown in slash menu
 ---
 
@@ -373,7 +374,7 @@ Important fields:
 
 - `name` - skill identifier
 - `description` - used for discovery and prompt context
-- `register_cmd` - if `true`, exposes the skill as a slash command
+- `register_cmd` - if `true`, exposes the skill as a slash command and includes it in the `/cmd` popup for manual triggering
 - `cmd_info` - short help text for the slash menu
 
 Validation highlights:
@@ -521,7 +522,7 @@ If `fd` or `rg` are missing, Kon can download them automatically. `eza` is optio
 
 ## Acknowledgements
 
-- Kon takes significant inspiration from [`pi` coding-agent](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent), especially around philosophy and UI direction.
+- Kon takes significant inspiration from [pi coding-agent](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent), especially around philosophy and UI direction.
 - Kon also borrows ideas from Amp, Claude Code, and other terminal coding agents.
 
 ---
