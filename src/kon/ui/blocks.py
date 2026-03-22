@@ -83,7 +83,7 @@ class ThinkingBlock(_StreamingMarkdownMixin, Static):
         self.add_class("thinking-block")
 
     def compose(self) -> ComposeResult:
-        if self._finalized and self._content:
+        if self._finalized and self._content and config.ui.collapse_thinking:
             yield Label(self._format_collapsed(), id="thinking-content", markup=False)
         else:
             yield Label(self._content, id="thinking-content", markup=False)
@@ -114,13 +114,16 @@ class ThinkingBlock(_StreamingMarkdownMixin, Static):
             self.call_after_refresh(self._do_finalize)
 
     def _do_finalize(self) -> None:
-        if self._content:
+        if self._content and config.ui.collapse_thinking:
             self.label.update(self._format_collapsed())
 
     def set_content(self, text: str) -> None:
         self._content = text
         self._finalized = True
-        self.label.update(self._format_collapsed())
+        if config.ui.collapse_thinking:
+            self.label.update(self._format_collapsed())
+        else:
+            self.label.update(text)
 
 
 class ContentBlock(_StreamingMarkdownMixin, Static):

@@ -53,6 +53,9 @@ extra = ["web_search", "web_fetch"]
 
 [ui]
 theme = "gruvbox-dark"
+# When true, finalized thinking blocks are collapsed to a single line summary.
+# Set to false to always show the full thinking content.
+collapse_thinking = true
 
 [permissions]
 # Approval behavior for mutating tools.

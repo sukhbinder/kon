@@ -42,6 +42,9 @@ class MetaConfig(BaseModel):
 
 class UIConfig(BaseModel):
     theme: str = "gruvbox-dark"
+    # When true, finalized thinking blocks are collapsed to a single line summary.
+    # Set to false to always show the full thinking content.
+    collapse_thinking: bool = True
 
     @field_validator("theme")
     @classmethod
