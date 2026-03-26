@@ -17,7 +17,7 @@ class WebSearchParams(BaseModel):
 
 class WebSearchTool(BaseTool):
     name = "web_search"
-    tool_icon = "*"
+    tool_icon = "%"
     mutating = False
     params = WebSearchParams
     description = (

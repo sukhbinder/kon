@@ -23,7 +23,7 @@ class WebFetchParams(BaseModel):
 
 class WebFetchTool(BaseTool):
     name = "web_fetch"
-    tool_icon = "*"
+    tool_icon = "%"
     mutating = False
     params = WebFetchParams
     description = (

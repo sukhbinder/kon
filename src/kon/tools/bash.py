@@ -143,7 +143,7 @@ class BashParams(BaseModel):
 
 class BashTool(BaseTool):
     name = "bash"
-    tool_icon = "*"
+    tool_icon = "$"
     params = BashParams
     description = (
         "Execute a bash command in the current working directory. "
