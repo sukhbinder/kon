@@ -24,7 +24,7 @@ class ApiType(Enum):
 
 @dataclass
 class Model:
-    id: str  # Model ID (e.g., "glm-4.7", "claude-opus-4.5")
+    id: str  # Model ID (e.g., "glm-4.7", "glm-5.1", "claude-opus-4.5")
     provider: str  # "openai", "zhipu", "github-copilot", "openai-codex"
     api: ApiType  # Which API format to use
     base_url: str  # API endpoint
@@ -47,8 +47,8 @@ MODELS: dict[str, Model] = {
         supports_thinking=True,
         vision_model="glm-4v-flash",
     ),
-    "glm-5": Model(
-        id="glm-5",
+    "glm-5.1": Model(
+        id="glm-5.1",
         provider="zhipu",
         api=ApiType.OPENAI_COMPLETIONS,
         base_url="https://api.z.ai/api/coding/paas/v4",
