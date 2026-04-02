@@ -161,6 +161,8 @@ class ChatLog(VerticalScroll):
         append_hint("@", "to search files inline")
         append_hint("tab", "to complete paths")
         append_hint("up and down", "for prompt history")
+        append_hint("enter", "for queue")
+        append_hint("alt+enter", "for steer queue")
         append_hint("shift+enter", "for newline", trailing_newline=False)
 
         info_label = Label(info_text)
