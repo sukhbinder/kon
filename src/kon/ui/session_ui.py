@@ -24,7 +24,6 @@ from .widgets import InfoBar, StatusLine, format_path
 
 
 class SessionUIMixin:
-    # Attributes provided by the App subclass
     _cwd: str
     _agent: Any
     _hide_thinking: bool
@@ -36,6 +35,8 @@ class SessionUIMixin:
     _api_key: str | None
     _provider: BaseProvider | None
     _tools: list[BaseTool]
+    _openai_compat_auth_mode: Any
+    _anthropic_compat_auth_mode: Any
 
     # Methods from App - declared for type checking
     if TYPE_CHECKING:

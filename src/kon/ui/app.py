@@ -59,6 +59,7 @@ from ..llm import (
     is_openai_logged_in,
     resolve_provider_api_type,
 )
+from ..llm.base import AuthMode
 from ..loop import Agent, build_system_prompt
 from ..permissions import ApprovalResponse
 from ..session import Session
@@ -136,8 +137,8 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         continue_recent: bool = False,
         thinking_level: str | None = None,
         extra_tools: list[str] | None = None,
-        openai_compat_auth_mode: str | None = None,
-        anthropic_compat_auth_mode: str | None = None,
+        openai_compat_auth_mode: AuthMode | None = None,
+        anthropic_compat_auth_mode: AuthMode | None = None,
     ):
         super().__init__()
         self.theme = "textual-ansi"
@@ -153,8 +154,10 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         self._resume_session = resume_session
         self._continue_recent = continue_recent
         self._thinking_level = thinking_level or config.llm.default_thinking_level
-        self._openai_compat_auth_mode = openai_compat_auth_mode or config.llm.auth.openai_compat
-        self._anthropic_compat_auth_mode = (
+        self._openai_compat_auth_mode: AuthMode = (
+            openai_compat_auth_mode or config.llm.auth.openai_compat
+        )
+        self._anthropic_compat_auth_mode: AuthMode = (
             anthropic_compat_auth_mode or config.llm.auth.anthropic_compat
         )
         self._is_running = False

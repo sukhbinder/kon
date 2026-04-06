@@ -39,7 +39,6 @@ class CommandsMixin:
     HANDOFF_BACKLINK_TYPE = "handoff_backlink"
     HANDOFF_FORWARD_LINK_TYPE = "handoff_forward_link"
 
-    # Attributes provided by the App subclass
     _cwd: str
     _thinking_level: str
     _model: str
@@ -51,6 +50,8 @@ class CommandsMixin:
     _is_running: bool
     _selection_mode: Any
     _tools: list
+    _openai_compat_auth_mode: Any
+    _anthropic_compat_auth_mode: Any
 
     # Methods from App - declared for type checking
     if TYPE_CHECKING:
