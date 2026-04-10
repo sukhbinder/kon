@@ -4,6 +4,7 @@ import os
 import shutil
 import time
 import tomllib
+import uuid
 from collections import deque
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -23,7 +24,7 @@ from ..context.skills import (
     merge_registered_skills,
     render_skill_prompt,
 )
-from ..core.types import StopReason
+from ..core.types import StopReason, UserMessage
 from ..events import (
     AgentEndEvent,
     AgentStartEvent,
@@ -784,6 +785,16 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         if not display_text:
             return
 
+        if event.shell_cmd:
+            chat = self.query_one("#chat-log", ChatLog)
+            chat.add_user_message(display_text)
+            self._is_running = True
+            self.run_worker(
+                self._run_manual_shell_command(event.shell_cmd, event.add_to_history),
+                exclusive=True,
+            )
+            return
+
         if display_text.startswith("/") and self._handle_command(display_text):
             return
 
@@ -841,6 +852,46 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         steer_items = [(display, True) for display, _ in self._steer_queue]
         normal_items = [(display, False) for display, _ in self._pending_queue]
         queue_display.update_items(steer_items + normal_items)
+
+    async def _run_manual_shell_command(self, command: str, add_to_history: bool) -> None:
+        from ..tools.bash import BashParams, BashTool
+
+        chat = self.query_one("#chat-log", ChatLog)
+        status = self.query_one("#status-line", StatusLine)
+
+        status.set_status("working")
+        self._cancel_event = asyncio.Event()
+
+        tool_id = f"manual-{uuid.uuid4().hex[:8]}"
+        chat.start_tool("bash", tool_id, command, icon="!")
+
+        try:
+            tool = BashTool()
+            params = BashParams(command=command)
+            result = await tool.execute(params, cancel_event=self._cancel_event)
+
+            if result:
+                markup = True
+                ui_summary = result.ui_summary
+                ui_details = result.ui_details
+                if ui_summary is None and ui_details is None and result.result:
+                    ui_details = result.result
+                    markup = False
+                success = result.success
+                chat.set_tool_result(tool_id, ui_summary, ui_details, success, markup=markup)
+
+                if add_to_history and self._session:
+                    combined_output = result.result or ""
+                    # If we have ui_details, it might be more readable but we want raw for agent
+                    history_content = f"Ran shell command: {command}\nOutput:\n{combined_output}"
+                    self._session.append_message(UserMessage(content=history_content))
+
+        except Exception as e:
+            chat.add_info_message(f"Error running manual command: {e}", error=True)
+        finally:
+            self._is_running = False
+            self._cancel_event = None
+            status.set_status("idle")
 
     async def _run_agent(self, prompt: str) -> None:
         chat = self.query_one("#chat-log", ChatLog)
