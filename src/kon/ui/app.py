@@ -24,7 +24,7 @@ from ..context.skills import (
     merge_registered_skills,
     render_skill_prompt,
 )
-from ..core.types import StopReason
+from ..core.types import StopReason, UserMessage
 from ..events import (
     AgentEndEvent,
     AgentStartEvent,
@@ -790,7 +790,9 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
 
         if event.shell_cmd:
             chat = self.query_one("#chat-log", ChatLog)
-            self.run_worker(self._run_shell_command(event.shell_cmd), exclusive=True)
+            self.run_worker(
+                self._run_shell_command(event.shell_cmd, event.add_to_history), exclusive=True
+            )
             return
 
         query_text = event.query_text.strip()
@@ -848,7 +850,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         normal_items = [(display, False) for display, _ in self._pending_queue]
         queue_display.update_items(steer_items + normal_items)
 
-    async def _run_shell_command(self, command: str) -> None:
+    async def _run_shell_command(self, command: str, add_to_history: bool) -> None:
         from ..core.types import ToolResult
         from ..tools.bash import BashTool
 
@@ -876,6 +878,12 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
                 success=result.success,
                 markup=False,
             )
+
+            if add_to_history and self._session:
+                combined_output = result.result or ""
+                history_content = f"Ran shell command:{command}\nOutput:\n{combined_output}"
+                self._session.append_message(UserMessage(content=history_content))
+
         except Exception as e:
             chat.set_tool_result(
                 tool_id=tool_call_id,

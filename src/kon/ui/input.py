@@ -351,20 +351,26 @@ class InputBox(Vertical):
             self.post_message(self.CompletionHide())
         self._do_submit(steer=True)
 
-    def _detect_shell_command(self, text: str) -> str | None:
+    def _detect_shell_command(self, text: str) -> tuple[str | None, bool]:
+        if text.startswith("!!"):
+            return text[2:].strip(), True
         if text.startswith("!"):
-            return text[1:].strip()
-        return None
+            return text[1:].strip(), False
+        return None, False
 
     def _do_submit(self, steer: bool = False) -> None:
         raw_text = self.text.strip()
         if not raw_text:
             return
 
-        shell_cmd = self._detect_shell_command(raw_text)
+        shell_cmd, add_to_history = self._detect_shell_command(raw_text)
 
         if shell_cmd:
-            self.post_message(self.Submitted(raw_text, shell_cmd=shell_cmd, steer=steer))
+            self.post_message(
+                self.Submitted(
+                    raw_text, shell_cmd=shell_cmd, add_to_history=add_to_history, steer=steer
+                )
+            )
             self.clear(reset_pastes=True)
             return
 
@@ -644,6 +650,7 @@ class InputBox(Vertical):
             selected_skill_name: str | None = None,
             selected_skill_query: str | None = None,
             shell_cmd: str | None = None,
+            add_to_history: bool = False,
             steer: bool = False,
         ) -> None:
             super().__init__()
@@ -653,6 +660,7 @@ class InputBox(Vertical):
             self.selected_skill_query = selected_skill_query
             self.steer = steer
             self.shell_cmd = shell_cmd
+            self.add_to_history = add_to_history
 
     class CompletionUpdate(Message):
         def __init__(self, items: list[ListItem]) -> None:

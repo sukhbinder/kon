@@ -45,12 +45,13 @@ class TestShellCommand:
         event.query_text = None
         event.selected_skill_name = None
         event.selected_skill_query = None
+        event.add_to_history = True
         event.steer = False
 
         app.on_input_submitted(event)
 
         app.run_worker.assert_called_once()
-        app._run_shell_command.assert_called_once_with("ls -l")
+        app._run_shell_command.assert_called_once_with("ls -l", True)
 
     def test_on_input_submitted_empty_shell_command(self, mock_kon_app):
         app, mock_chat_log, _ = mock_kon_app
@@ -91,7 +92,7 @@ class TestShellCommand:
             mock_bash_tool_instance.params.return_value = {"command": "echo hello"}
 
             command = "echo hello"
-            await app._run_shell_command(command)
+            await app._run_shell_command(command, add_to_history=True)
 
             assert app._is_running is False
             mock_status_line.set_status.assert_any_call("working")
@@ -125,7 +126,7 @@ class TestShellCommand:
             mock_bash_tool_instance.params.return_value = {"command": "bad command"}
 
             command = "bad command"
-            await app._run_shell_command(command)
+            await app._run_shell_command(command, add_to_history=True)
 
             assert app._is_running is False
             mock_status_line.set_status.assert_any_call("working")

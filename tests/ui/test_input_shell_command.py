@@ -43,23 +43,25 @@ def test_detect_shell_command_with_valid_command():
     input_box = _TestableInputBox()
 
     # Test with a valid shell command
-    command = input_box._detect_shell_command("!ls -la")
+    command, add_to_history = input_box._detect_shell_command("!ls -la")
     assert command == "ls -la"
+    assert add_to_history == False
 
 
 def test_detect_shell_command_with_empty_command():
     input_box = _TestableInputBox()
 
     # Test with empty command after !
-    command = input_box._detect_shell_command("!")
+    command, add_to_history = input_box._detect_shell_command("!")
     assert command == ""
+    assert add_to_history == False
 
 
 def test_detect_shell_command_with_whitespace():
     input_box = _TestableInputBox()
 
     # Test with command that has leading/trailing whitespace
-    command = input_box._detect_shell_command("!  echo hello  ")
+    command, _ = input_box._detect_shell_command("!  echo hello  ")
     assert command == "echo hello"
 
 
@@ -67,7 +69,7 @@ def test_detect_shell_command_without_exclamation():
     input_box = _TestableInputBox()
 
     # Test with text that doesn't start with !
-    command = input_box._detect_shell_command("echo hello")
+    command, _ = input_box._detect_shell_command("echo hello")
     assert command is None
 
 
@@ -75,8 +77,11 @@ def test_detect_shell_command_with_complex_command():
     input_box = _TestableInputBox()
 
     # Test with a more complex shell command
-    command = input_box._detect_shell_command("!grep -r 'pattern' /path/to/dir | wc -l")
+    command, add_to_history = input_box._detect_shell_command(
+        "!!grep -r 'pattern' /path/to/dir | wc -l"
+    )
     assert command == "grep -r 'pattern' /path/to/dir | wc -l"
+    assert add_to_history == True
 
 
 def test_submit_shell_command_posts_correct_message():
