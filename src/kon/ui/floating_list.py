@@ -246,8 +246,13 @@ class FloatingList[T](Widget):
         else:
             text.append("  ")
 
-        # Label (padded to computed width + extra gap for alignment)
-        label = item.label.ljust(self._label_width + 4)
+        # Label (truncated if too long, padded to computed width + gap)
+        raw_label = item.label
+        if len(raw_label) > self._label_width:
+            label = raw_label[: self._label_width - 1] + "…"
+        else:
+            label = raw_label
+        label = label.ljust(self._label_width + 4)
         if is_selected:
             text.append(label, style=selected_color)
         else:
