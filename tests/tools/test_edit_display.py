@@ -10,8 +10,8 @@ def test_format_diff_display_short_lines_not_truncated() -> None:
 
 
 def test_format_diff_display_truncates_long_lines() -> None:
-    long_added = "+2 " + "x" * 200
-    long_removed = "-2 " + "y" * 200
+    long_added = "+2 " + "x" * 300
+    long_removed = "-2 " + "y" * 300
 
     display = format_diff_display(f"{long_added}\n{long_removed}")
     lines = display.split("\n")

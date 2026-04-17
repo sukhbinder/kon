@@ -140,7 +140,7 @@ def format_diff_display(diff: str) -> str:
         if not line:
             continue
 
-        truncated = line[:102] + "..." if len(line) > 105 else line
+        truncated = line[:200] + "..." if len(line) > 203 else line
         escaped = truncated.replace("[", "\\[")
 
         if line.startswith("-"):
