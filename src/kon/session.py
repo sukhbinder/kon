@@ -49,6 +49,7 @@ class SessionHeader(BaseModel):
     timestamp: str
     cwd: str
     system_prompt: str | None = None
+    initial_thinking_level: str = "high"
 
 
 class EntryBase(BaseModel):
@@ -187,7 +188,7 @@ class Session:
         persist: bool = True,
         initial_provider: str | None = None,
         initial_model_id: str | None = None,
-        initial_thinking_level: str = "medium",
+        initial_thinking_level: str = "high",
     ):
         self._id = session_id
         self._cwd = cwd
@@ -544,7 +545,7 @@ class Session:
         persist: bool = True,
         provider: str | None = None,
         model_id: str | None = None,
-        thinking_level: str = "medium",
+        thinking_level: str = "high",
         system_prompt: str | None = None,
     ) -> "Session":
         session_id = str(uuid.uuid4())
@@ -559,7 +560,11 @@ class Session:
             initial_thinking_level=thinking_level,
         )
         session._header = SessionHeader(
-            id=session_id, timestamp=timestamp, cwd=cwd, system_prompt=system_prompt
+            id=session_id,
+            timestamp=timestamp,
+            cwd=cwd,
+            system_prompt=system_prompt,
+            initial_thinking_level=thinking_level,
         )
 
         if persist:
@@ -609,7 +614,13 @@ class Session:
         if not header:
             raise ValueError(f"Invalid session file (no header): {path}")
 
-        session = cls(session_id=header.id, cwd=header.cwd, session_file=path, persist=True)
+        session = cls(
+            session_id=header.id,
+            cwd=header.cwd,
+            session_file=path,
+            persist=True,
+            initial_thinking_level=header.initial_thinking_level,
+        )
         session._header = header
         session._entries = entries
         session._by_id = {e.id: e for e in entries}
@@ -625,7 +636,7 @@ class Session:
         cwd: str,
         provider: str | None = None,
         model_id: str | None = None,
-        thinking_level: str = "medium",
+        thinking_level: str = "high",
         system_prompt: str | None = None,
     ) -> "Session":
         sessions_dir = cls.get_sessions_dir(cwd)
@@ -761,7 +772,7 @@ class Session:
         cwd: str = ".",
         provider: str | None = None,
         model_id: str | None = None,
-        thinking_level: str = "medium",
+        thinking_level: str = "high",
         system_prompt: str | None = None,
     ) -> "Session":
         return cls.create(

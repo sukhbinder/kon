@@ -50,7 +50,7 @@ def test_on_mount_continue_recent_error_shows_launch_warning(fake_chat, monkeypa
     app.run_worker = _run_worker  # type: ignore[method-assign]
 
     def _fail_continue_recent(
-        cwd, provider=None, model_id=None, thinking_level="medium", system_prompt=None
+        cwd, provider=None, model_id=None, thinking_level="high", system_prompt=None
     ):
         raise ValueError("Invalid session file (no header): /tmp/bad.jsonl")
 

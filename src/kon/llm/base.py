@@ -77,7 +77,7 @@ class ProviderConfig:
     model: str = ""
     max_tokens: int = 8192
     temperature: float | None = None
-    thinking_level: str = "medium"
+    thinking_level: str = "high"
     provider: str | None = None
     session_id: str | None = None
     openai_compat_auth_mode: AuthMode = "auto"

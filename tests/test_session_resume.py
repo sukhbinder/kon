@@ -73,7 +73,7 @@ class _TestSessionApp(SessionUIMixin):
         self._tools = []
         self._model = "mock-model"
         self._model_provider = "mock"
-        self._thinking_level = "medium"
+        self._thinking_level = "high"
         self._api_key = None
         self._hide_thinking = False
         self._current_block_type = None

@@ -376,7 +376,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         if self._provider:
             valid_levels = self._provider.thinking_levels
             if self._thinking_level not in valid_levels:
-                self._thinking_level = valid_levels[0] if valid_levels else "medium"
+                self._thinking_level = valid_levels[0] if valid_levels else "high"
                 self._provider.set_thinking_level(self._thinking_level)
 
         self._session_start_time = time.time()

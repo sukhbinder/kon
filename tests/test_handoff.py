@@ -47,7 +47,7 @@ class _TestCommandsApp(CommandsMixin):
         status_line: _FakeStatusLine | None = None,
     ) -> None:
         self._cwd = "/test/project"
-        self._thinking_level = "medium"
+        self._thinking_level = "high"
         self._model = "mock-model"
         self._model_provider = "mock"
         self._api_key = None
@@ -248,12 +248,7 @@ def test_clear_conversation_creates_session_with_persisted_system_prompt(monkeyp
     original_create = Session.create
 
     def _fake_create(
-        cwd,
-        persist=True,
-        provider=None,
-        model_id=None,
-        thinking_level="medium",
-        system_prompt=None,
+        cwd, persist=True, provider=None, model_id=None, thinking_level="high", system_prompt=None
     ):
         captured["system_prompt"] = system_prompt
         return original_create(
