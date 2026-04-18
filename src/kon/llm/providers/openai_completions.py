@@ -3,13 +3,14 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 
-from kon import config as kon_config
 from openai import APIStatusError, AsyncOpenAI, RateLimitError
 from openai.types.chat import (
     ChatCompletionChunk,
     ChatCompletionMessageParam,
     ChatCompletionToolParam,
 )
+
+from kon import config as kon_config
 
 from ...core.types import (
     AssistantMessage,

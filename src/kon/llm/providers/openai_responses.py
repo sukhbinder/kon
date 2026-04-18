@@ -2,8 +2,9 @@ import json
 from collections.abc import AsyncIterator
 from typing import Any
 
-from kon import config as kon_config
 from openai import APIStatusError, AsyncOpenAI, RateLimitError
+
+from kon import config as kon_config
 
 from ...core.types import (
     AssistantMessage,
