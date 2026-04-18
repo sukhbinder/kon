@@ -9,6 +9,7 @@ from textual import events
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
+from textual.timer import Timer
 from textual.widgets import Label
 
 from kon import config
@@ -171,7 +172,28 @@ class InfoBar(Vertical):
         self._cache_write_tokens = 0
         self._context_tokens: int | None = None
         self._file_changes: dict[str, tuple[int, int]] = {}  # path -> (added, removed)
+        self._row1_right: Label | None = None
+        self._row2_left: Label | None = None
+        self._row2_right: Label | None = None
         self.add_class("info-bar")
+
+    @property
+    def _label_row1_right(self) -> Label:
+        if self._row1_right is None:
+            self._row1_right = self.query_one("#info-row1-right", Label)
+        return self._row1_right
+
+    @property
+    def _label_row2_left(self) -> Label:
+        if self._row2_left is None:
+            self._row2_left = self.query_one("#info-row2-left", Label)
+        return self._row2_left
+
+    @property
+    def _label_row2_right(self) -> Label:
+        if self._row2_right is None:
+            self._row2_right = self.query_one("#info-row2-right", Label)
+        return self._row2_right
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="info-row-1"):
@@ -251,7 +273,7 @@ class InfoBar(Vertical):
         self._context_tokens = (
             input_tokens + output_tokens + cache_read_tokens + cache_write_tokens
         )
-        self.query_one("#info-row1-right", Label).update(self._format_row1_right())
+        self._label_row1_right.update(self._format_row1_right())
 
     def set_tokens(
         self,
@@ -266,16 +288,16 @@ class InfoBar(Vertical):
         self._cache_read_tokens = cache_read_tokens
         self._cache_write_tokens = cache_write_tokens
         self._context_tokens = context_tokens if context_tokens > 0 else None
-        self.query_one("#info-row1-right", Label).update(self._format_row1_right())
+        self._label_row1_right.update(self._format_row1_right())
 
     def set_model(self, model: str, provider: str | None = None) -> None:
         self._model = model
         self._model_provider = provider
-        self.query_one("#info-row2-right", Label).update(self._format_row2_left())
+        self._label_row2_right.update(self._format_row2_left())
 
     def set_thinking_level(self, thinking_level: str) -> None:
         self._thinking_level = thinking_level
-        self.query_one("#info-row2-right", Label).update(self._format_row2_left())
+        self._label_row2_right.update(self._format_row2_left())
 
     def set_thinking_visibility(self, hide_thinking: bool) -> None:
         self._hide_thinking = hide_thinking
@@ -283,17 +305,17 @@ class InfoBar(Vertical):
     def update_file_changes(self, path: str, added: int, removed: int) -> None:
         prev_added, prev_removed = self._file_changes.get(path, (0, 0))
         self._file_changes[path] = (prev_added + added, prev_removed + removed)
-        self.query_one("#info-row2-left", Label).update(self._format_row2_right())
+        self._label_row2_left.update(self._format_row2_right(), layout=False)
 
     def set_file_changes(self, file_changes: dict[str, tuple[int, int]]) -> None:
         self._file_changes = file_changes
-        self.query_one("#info-row2-left", Label).update(self._format_row2_right())
+        self._label_row2_left.update(self._format_row2_right(), layout=False)
 
     def on_click(self, event: events.Click) -> None:
         if not self._file_changes:
             return
         widget, _ = self.screen.get_widget_at(event.screen_x, event.screen_y)
-        if widget is self.query_one("#info-row2-left", Label):
+        if widget is self._label_row2_left:
             event.stop()
             self.app.push_screen(FileChangesModal(self._file_changes))
 
@@ -304,9 +326,16 @@ class QueueDisplay(Vertical):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._items: list[tuple[str, bool]] = []  # (text, is_steer)
+        self._content_label: Label | None = None
 
     def compose(self) -> ComposeResult:
         yield Label("", id="queue-content")
+
+    @property
+    def _queue_label(self) -> Label:
+        if self._content_label is None:
+            self._content_label = self.query_one("#queue-content", Label)
+        return self._content_label
 
     def on_mount(self) -> None:
         self.add_class("-hidden")
@@ -342,20 +371,19 @@ class QueueDisplay(Vertical):
 
     def update_items(self, items: list[tuple[str, bool]]) -> None:
         self._items = items
-        label = self.query_one("#queue-content", Label)
         if not items:
-            label.update("")
+            self._queue_label.update("")
             self.add_class("-hidden")
             return
 
         self.remove_class("-hidden")
-        label.update(self._render_items())
+        self._queue_label.update(self._render_items())
 
     def on_resize(self, event: events.Resize) -> None:
         del event
         if not self._items:
             return
-        self.query_one("#queue-content", Label).update(self._render_items())
+        self._queue_label.update(self._render_items())
 
 
 class StatusLine(Horizontal):
@@ -363,19 +391,30 @@ class StatusLine(Horizontal):
         super().__init__(**kwargs)
         self._status = "idle"
         self._spinner = Spinner("dots")
-        self._timer = None
+        self._timer: Timer | None = None
         self._start_time: float | None = None
         self._tool_calls = 0
         self._show_exit_hint = False
         self._streaming_token_count = 0
+        self._status_label: Label | None = None
+        self._hint_label: Label | None = None
         self.add_class("status-line")
 
     def compose(self) -> ComposeResult:
         yield Label("", id="status-text")
         yield Label("", id="exit-hint")
 
-    def on_mount(self) -> None:
-        self._timer = self.set_interval(0.15, self._update_spinner)
+    @property
+    def _status_text(self) -> Label:
+        if self._status_label is None:
+            self._status_label = self.query_one("#status-text", Label)
+        return self._status_label
+
+    @property
+    def _exit_hint_label(self) -> Label:
+        if self._hint_label is None:
+            self._hint_label = self.query_one("#exit-hint", Label)
+        return self._hint_label
 
     def _render_spinner(self) -> Text:
         spinner_color = config.ui.colors.accent
@@ -406,26 +445,37 @@ class StatusLine(Horizontal):
         result.append(status, style=dim_color)
         return result
 
+    def _start_spinner_timer(self) -> None:
+        if self._timer is None:
+            self._timer = self.set_interval(0.15, self._update_spinner)
+
+    def _stop_spinner_timer(self) -> None:
+        if self._timer is not None:
+            self._timer.stop()
+            self._timer = None
+
     def _update_spinner(self) -> None:
         if self._status != "idle":
-            self.query_one("#status-text", Label).update(self._render_spinner())
+            self._status_text.update(self._render_spinner(), layout=False)
 
     def set_status(self, status: str) -> None:
         old_status = self._status
         self._status = status
 
         if status == "idle":
+            self._stop_spinner_timer()
             self._streaming_token_count = 0
             if old_status != "idle" and self._start_time is not None:
-                self.query_one("#status-text", Label).update(self._format_complete_status())
+                self._status_text.update(self._format_complete_status(), layout=False)
             elif old_status == "idle" and self._start_time is None:
-                self.query_one("#status-text", Label).update("")
+                self._status_text.update("", layout=False)
         else:
             if old_status == "idle":
                 self._start_time = time.time()
                 self._tool_calls = 0
                 self._streaming_token_count = 0
-            self.query_one("#status-text", Label).update(self._render_spinner())
+            self._start_spinner_timer()
+            self._status_text.update(self._render_spinner(), layout=False)
 
     def increment_tool_calls(self) -> None:
         self._tool_calls += 1
@@ -441,7 +491,7 @@ class StatusLine(Horizontal):
         text = Text()
         text.append("ctrl+c", style=muted_color)
         text.append(" again to exit", style=dim_color)
-        self.query_one("#exit-hint", Label).update(text)
+        self._exit_hint_label.update(text, layout=False)
 
     def show_delete_session_hint(self) -> None:
         muted_color = config.ui.colors.muted
@@ -449,15 +499,16 @@ class StatusLine(Horizontal):
         text = Text()
         text.append("ctrl+d", style=muted_color)
         text.append(" again to delete session", style=dim_color)
-        self.query_one("#exit-hint", Label).update(text)
+        self._exit_hint_label.update(text, layout=False)
 
     def hide_exit_hint(self) -> None:
         self._show_exit_hint = False
-        self.query_one("#exit-hint", Label).update("")
+        self._exit_hint_label.update("", layout=False)
 
     def reset(self) -> None:
+        self._stop_spinner_timer()
         self._start_time = None
         self._tool_calls = 0
         self._show_exit_hint = False
-        self.query_one("#status-text", Label).update("")
-        self.query_one("#exit-hint", Label).update("")
+        self._status_text.update("", layout=False)
+        self._exit_hint_label.update("", layout=False)

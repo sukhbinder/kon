@@ -37,6 +37,7 @@ class ChatLog(VerticalScroll):
         self._spinner_label: Label | None = None
         self._spinner: Spinner | None = None
         self._spinner_timer: Timer | None = None
+        self._scroll_pending: bool = False
 
     def on_mount(self) -> None:
         self.anchor()
@@ -52,6 +53,20 @@ class ChatLog(VerticalScroll):
         if abs(max_y - current_y) < 3:
             self._anchor_released = False
             self.scroll_end(animate=animate)
+
+    def _request_scroll(self) -> None:
+        """Batch scroll-to-bottom into the next refresh frame.
+
+        Multiple calls between frames coalesce into a single scroll_end(),
+        avoiding repeated layout recalculations during fast streaming.
+        """
+        if not self._scroll_pending:
+            self._scroll_pending = True
+            self.call_after_refresh(self._flush_scroll)
+
+    def _flush_scroll(self) -> None:
+        self._scroll_pending = False
+        self._scroll_if_anchored(animate=False)
 
     def _prune_if_needed(self) -> None:
         children = list(self.children)
@@ -276,12 +291,12 @@ class ChatLog(VerticalScroll):
     async def append_to_current(self, text: str) -> None:
         if self._current_block:
             await self._current_block.append(text)
-            self._scroll_if_anchored(animate=False)
+            self._request_scroll()
 
     def set_block_content(self, text: str) -> None:
         if self._current_block:
             self._current_block.set_content(text)
-            self._scroll_if_anchored(animate=False)
+            self._request_scroll()
 
     def set_tool_result(
         self,
