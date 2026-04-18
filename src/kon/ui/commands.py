@@ -797,11 +797,8 @@ Extra tools:
             chat.show_status("Compaction failed")
             chat.add_info_message(f"Compaction failed: {e}", error=True)
 
-    def _format_session_label(self, message: str, width: int = 90) -> str:
-        normalized = " ".join(message.split())
-        if len(normalized) > width:
-            normalized = normalized[: width - 3].rstrip() + "..."
-        return normalized.ljust(width)
+    def _format_session_label(self, message: str) -> str:
+        return " ".join(message.split())
 
     def _format_session_age(self, modified: datetime) -> str:
         now = datetime.now(UTC)

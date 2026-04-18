@@ -316,6 +316,35 @@ class QueueDisplay(Vertical):
     def on_mount(self) -> None:
         self.add_class("-hidden")
 
+    def _truncate_text(self, text: str, max_width: int) -> str:
+        if max_width <= 0:
+            return ""
+        if len(text) <= max_width:
+            return text
+        if max_width <= 3:
+            return "." * max_width
+        return text[: max_width - 3] + "..."
+
+    def _render_items(self) -> Text:
+        dim_color = config.ui.colors.dim
+        steer_items = [(text, True) for text, is_steer in self._items if is_steer]
+        normal_items = [(text, False) for text, is_steer in self._items if not is_steer]
+        ordered = steer_items + normal_items
+
+        content_width = max(0, self.size.width - 2) if self.size.width else 0
+        result = Text()
+        result.append("Queue", style="bold " + dim_color)
+        for text, is_steer in ordered:
+            prefix = " ↳ "
+            steer_prefix = "[steer] " if is_steer else ""
+            available = max(0, content_width - len(prefix) - len(steer_prefix))
+            truncated = self._truncate_text(text, available)
+            result.append("\n" + prefix, style=dim_color)
+            if is_steer:
+                result.append(steer_prefix, style=dim_color)
+            result.append(truncated, style=dim_color)
+        return result
+
     def update_items(self, items: list[tuple[str, bool]]) -> None:
         self._items = items
         label = self.query_one("#queue-content", Label)
@@ -325,20 +354,13 @@ class QueueDisplay(Vertical):
             return
 
         self.remove_class("-hidden")
-        dim_color = config.ui.colors.dim
-        steer_items = [(text, True) for text, is_steer in items if is_steer]
-        normal_items = [(text, False) for text, is_steer in items if not is_steer]
-        ordered = steer_items + normal_items
+        label.update(self._render_items())
 
-        result = Text()
-        result.append("Queue", style="bold " + dim_color)
-        for text, is_steer in ordered:
-            truncated = text if len(text) <= 90 else text[:87] + "..."
-            result.append("\n ↳ ", style=dim_color)
-            if is_steer:
-                result.append("[steer] ", style=dim_color)
-            result.append(truncated, style=dim_color)
-        label.update(result)
+    def on_resize(self, event: events.Resize) -> None:
+        del event
+        if not self._items:
+            return
+        self.query_one("#queue-content", Label).update(self._render_items())
 
 
 class StatusLine(Horizontal):

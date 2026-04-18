@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import TypeVar
 
 from rich.text import Text
+from textual import events
 from textual.reactive import reactive
 from textual.widget import Widget
 
@@ -87,6 +88,7 @@ class FloatingList[T](Widget):
         self._search_enabled = False
         self._search_query = ""
         self._all_items: list[ListItem[T]] = []
+        self._description_width = 0
 
     @property
     def items(self) -> list[ListItem[T]]:
@@ -110,13 +112,42 @@ class FloatingList[T](Widget):
     def search_enabled(self) -> bool:
         return self._search_enabled
 
+    def _get_source_items(self) -> list[ListItem[T]]:
+        if self._search_enabled and self._all_items:
+            return self._all_items
+        return self._items
+
+    def _compute_description_width(self) -> int:
+        source = self._get_source_items()
+        if not source:
+            return 0
+        max_desc_len = max((len(item.description) for item in source), default=0)
+        if max_desc_len == 0:
+            return 0
+
+        available_width = max(0, self.size.width - 4) if self.size.width else 0
+        if available_width == 0:
+            return min(max_desc_len, 20)
+
+        # Reserve space for arrow, inter-column gap, and minimum label width.
+        max_desc_width = max(0, available_width - 2 - 4 - self._min_label_width - 1)
+        return min(max_desc_len, max_desc_width)
+
     def _compute_label_width(self) -> int:
-        # Compute from all items when search is enabled to keep stable column width
-        source = self._all_items if self._search_enabled and self._all_items else self._items
+        source = self._get_source_items()
         if not source:
             return self._min_label_width
+
+        available_width = max(0, self.size.width - 4) if self.size.width else 0
+        dynamic_max_width = self._max_label_width
+        if available_width > 0:
+            desc_width = self._compute_description_width()
+            reserved = 2 + 4 + (1 + desc_width if desc_width > 0 else 0)
+            dynamic_max_width = max(self._min_label_width, available_width - reserved)
+            dynamic_max_width = min(dynamic_max_width, self._max_label_width)
+
         max_len = max(len(item.label) for item in source)
-        return max(self._min_label_width, min(max_len, self._max_label_width))
+        return max(self._min_label_width, min(max_len, dynamic_max_width))
 
     def show(
         self,
@@ -131,6 +162,7 @@ class FloatingList[T](Widget):
         self._selected_index = 0
         if max_label_width is not None:
             self._max_label_width = max_label_width
+        self._description_width = self._compute_description_width()
         self._label_width = self._compute_label_width()
         self._visible = True
         self.add_class("-visible")
@@ -159,6 +191,7 @@ class FloatingList[T](Widget):
             self._items = self._all_items
         else:
             self._items = self._fuzzy_filter(query, self._all_items)
+        self._description_width = self._compute_description_width()
         self._label_width = self._compute_label_width()
         self._selected_index = 0
         self._render_key += 1
@@ -167,6 +200,7 @@ class FloatingList[T](Widget):
         self._items = items
         if self._search_enabled:
             self._all_items = items
+        self._description_width = self._compute_description_width()
         self._label_width = self._compute_label_width()
         # Clamp selected index
         if self._selected_index >= len(items):
@@ -244,6 +278,14 @@ class FloatingList[T](Widget):
 
         return result
 
+    def on_resize(self, event: events.Resize) -> None:
+        del event
+        if not self._visible:
+            return
+        self._description_width = self._compute_description_width()
+        self._label_width = self._compute_label_width()
+        self._render_key += 1
+
     def _render_row(self, item: ListItem[T], is_selected: bool) -> Text:
         selected_color = config.ui.colors.selected
         dim_color = config.ui.colors.dim
@@ -268,9 +310,15 @@ class FloatingList[T](Widget):
             text.append(label)
 
         # Description (if any)
-        if item.description:
+        if item.description and self._description_width > 0:
+            description = item.description
+            if len(description) > self._description_width:
+                if self._description_width == 1:
+                    description = "…"
+                else:
+                    description = description[: self._description_width - 1] + "…"
             text.append(" ")
-            text.append(item.description, style=dim_color)
+            text.append(description, style=dim_color)
 
         return text
 
