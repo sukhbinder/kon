@@ -117,6 +117,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
     CSS = get_styles()
     TITLE = "kon"
     VERSION = VERSION
+    PAUSE_GC_ON_SCROLL = True
 
     BINDINGS: ClassVar[list] = [
         ("ctrl+c", "handle_ctrl_c", "Clear"),
@@ -464,6 +465,10 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         self._startup_complete = True
         self._show_pending_update_notice_if_idle()
         input_box.focus()
+
+        import gc
+
+        gc.freeze()
 
     async def _collect_file_paths(self) -> None:
         """Collect file paths using glob (fallback when fd is unavailable)."""
