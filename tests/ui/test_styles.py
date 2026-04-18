@@ -1,0 +1,16 @@
+from kon import Config, reset_config, set_config
+from kon.ui.styles import get_styles
+
+
+def test_approval_background_blends_terminal_bg_with_accent():
+    set_config(Config({"ui": {"theme": "gruvbox-dark"}}))
+
+    try:
+        styles = get_styles()
+    finally:
+        reset_config()
+
+    approval_block = styles.split(".tool-block.-approval {")[1].split("}", 1)[0]
+
+    assert "background: #2d2e2e;" in approval_block
+    assert "background: #3c3836;" not in approval_block

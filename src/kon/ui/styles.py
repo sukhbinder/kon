@@ -3,8 +3,20 @@
 from kon import config
 
 
+def _blend_hex(base: str, overlay: str, overlay_weight: float) -> str:
+    """Blend two hex colors, biasing toward the base color."""
+    base_rgb = tuple(int(base[i : i + 2], 16) for i in (1, 3, 5))
+    overlay_rgb = tuple(int(overlay[i : i + 2], 16) for i in (1, 3, 5))
+    channels = tuple(
+        round((base_channel * (1 - overlay_weight)) + (overlay_channel * overlay_weight))
+        for base_channel, overlay_channel in zip(base_rgb, overlay_rgb, strict=True)
+    )
+    return f"#{channels[0]:02x}{channels[1]:02x}{channels[2]:02x}"
+
+
 def get_styles() -> str:
     colors = config.ui.colors
+    approval_bg = _blend_hex(colors.bg, colors.accent, overlay_weight=0.05)
 
     return f"""
 Screen {{
@@ -114,7 +126,7 @@ Screen {{
 }}
 
 .tool-block.-approval {{
-    background: {colors.panel};
+    background: {approval_bg};
     color: {colors.dim};
     border-left: outer {colors.accent};
     margin: 1 0 1 1;
