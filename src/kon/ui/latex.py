@@ -328,6 +328,9 @@ def preprocess_latex(text: str) -> str:
     Handles inline ``$...$``, ``\(...\)``, display ``$$...$$``, and ``\[...\]``.
     Math inside fenced code blocks (`` ``` ``) is preserved verbatim.
     """
+    if "$" not in text and "\\(" not in text and "\\[" not in text:
+        return text
+
     parts = _FENCE_RE.split(text)
     out = []
     for part in parts:
