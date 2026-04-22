@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from readability import Document
 
 from ..core.types import ToolResult
-from ._tool_utils import ToolCancelledError, await_task_or_cancel, truncate_text
+from ._tool_utils import ToolCancelledError, await_task_or_cancel
 from .base import BaseTool
 
 MAX_CHARS = 80_000

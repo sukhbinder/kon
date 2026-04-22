@@ -10,7 +10,6 @@ from ._tool_utils import (
     communicate_or_cancel,
     shorten_path,
     truncate_lines_by_bytes,
-    truncate_text,
 )
 from .base import BaseTool
 
