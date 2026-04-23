@@ -269,11 +269,30 @@ Type `/` at the start of the input box to see available commands.
 
 Kon includes built-in themes and supports switching from inside the app:
 
+- `ayu`
+- `catppuccin-frappe`
+- `catppuccin-latte`
+- `catppuccin-macchiato`
+- `catppuccin-mocha`
+- `dracula`
+- `everforest`
+- `flexoki`
+- `github-dark`
+- `github-light`
 - `gruvbox-dark`
 - `gruvbox-light`
+- `kanagawa`
+- `monokai`
+- `nightowl`
+- `nord`
 - `one-dark`
 - `one-light`
-- other built-in themes shipped with the app
+- `palenight`
+- `rosepine`
+- `solarized-dark`
+- `solarized-light`
+- `tokyo-day`
+- `tokyo-night`
 
 Set one interactively with `/themes`, or persist it in config:
 
