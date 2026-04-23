@@ -11,9 +11,9 @@ from typing import Literal
 NotificationEvent = Literal["completion", "permission", "error"]
 
 _SOUND_FILES: dict[NotificationEvent, str] = {
-    "completion": "completion.mp3",
-    "permission": "permission.mp3",
-    "error": "error.mp3",
+    "completion": "completion.wav",
+    "permission": "permission.wav",
+    "error": "error.wav",
 }
 
 
