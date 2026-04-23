@@ -61,7 +61,7 @@ from ..llm import (
 )
 from ..llm.base import AuthMode
 from ..loop import Agent
-from ..notify import notify
+from ..notify import NotificationEvent, notify
 from ..permissions import ApprovalResponse
 from ..session import Session
 from ..tools import DEFAULT_TOOLS, EXTRA_TOOLS, get_tool, get_tools
@@ -849,13 +849,22 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         queue_display.update_items(steer_items + normal_items)
 
     def _should_notify_for_event(self, event: object) -> bool:
+        return self._notification_event_type(event) is not None
+
+    def _notification_event_type(self, event: object) -> NotificationEvent | None:
         if not config.notifications.enabled:
-            return False
+            return None
         if not isinstance(event, _NOTIFY_EVENTS):
-            return False
-        return not (
-            isinstance(event, AgentEndEvent) and event.stop_reason == StopReason.INTERRUPTED
-        )
+            return None
+        if isinstance(event, AgentEndEvent):
+            if event.stop_reason == StopReason.INTERRUPTED:
+                return None
+            if event.stop_reason == StopReason.ERROR:
+                return "error"
+            return "completion"
+        if isinstance(event, ToolApprovalEvent):
+            return "permission"
+        return None
 
     async def _run_agent(self, prompt: str) -> None:
         chat = self.query_one("#chat-log", ChatLog)
@@ -901,8 +910,9 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
                 async for event in self._agent.run(
                     current_prompt, cancel_event=self._cancel_event, steer_event=self._steer_event
                 ):
-                    if self._should_notify_for_event(event):
-                        notify("kon", "Task complete")
+                    notification_event = self._notification_event_type(event)
+                    if notification_event:
+                        notify(notification_event)
 
                     match event:
                         case AgentStartEvent():

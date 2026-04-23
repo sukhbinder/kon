@@ -1,30 +1,81 @@
-import os
-import time
+from __future__ import annotations
 
-_BELL_DEBOUNCE_S = 0.5
-_last_bell_time: float = 0.0
+import platform
+import shutil
+import subprocess
+from functools import cache
+from importlib import resources
+from pathlib import Path
+from typing import Literal
+
+NotificationEvent = Literal["completion", "permission", "error"]
+
+_SOUND_FILES: dict[NotificationEvent, str] = {
+    "completion": "completion.mp3",
+    "permission": "permission.mp3",
+    "error": "error.mp3",
+}
 
 
-def _raw_write(data: bytes) -> None:
-    try:
-        fd = os.open("/dev/tty", os.O_WRONLY | os.O_NOCTTY)
-        try:
-            os.write(fd, data)
-        finally:
-            os.close(fd)
-    except OSError:
-        os.write(2, data)
+@cache
+def _platform() -> str:
+    return platform.system().lower()
 
 
-def _bell() -> None:
-    global _last_bell_time
-    now = time.monotonic()
-    if now - _last_bell_time < _BELL_DEBOUNCE_S:
+@cache
+def _sound_path(event: NotificationEvent) -> Path:
+    return Path(str(resources.files("kon.sounds").joinpath(_SOUND_FILES[event])))
+
+
+@cache
+def _linux_player() -> str | None:
+    for player in ("paplay", "aplay", "mpv", "ffplay"):
+        if shutil.which(player):
+            return player
+    return None
+
+
+def _run(command: list[str]) -> None:
+    subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def _play_macos(sound_path: Path) -> None:
+    _run(["afplay", str(sound_path)])
+
+
+def _play_linux(sound_path: Path) -> None:
+    player = _linux_player()
+    if player is None:
         return
-    _last_bell_time = now
-    _raw_write(b"\a")
+
+    sound = str(sound_path)
+    match player:
+        case "paplay":
+            _run(["paplay", sound])
+        case "aplay":
+            _run(["aplay", sound])
+        case "mpv":
+            _run(
+                [
+                    "mpv",
+                    "--no-video",
+                    "--no-terminal",
+                    "--script-opts=autoload-disabled=yes",
+                    sound,
+                ]
+            )
+        case "ffplay":
+            _run(["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", sound])
 
 
-def notify(title: str, message: str) -> None:
-    del title, message
-    _bell()
+def notify(event: NotificationEvent) -> None:
+    sound_path = _sound_path(event)
+    os_name = _platform()
+
+    try:
+        if os_name == "darwin":
+            _play_macos(sound_path)
+        elif os_name == "linux":
+            _play_linux(sound_path)
+    except Exception:
+        return

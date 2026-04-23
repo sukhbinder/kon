@@ -1,46 +1,71 @@
-import os
-import time
+from pathlib import Path
 
-from kon.notify import _bell, notify
-
-
-def _capture_raw_write(monkeypatch):
-    written = bytearray()
-
-    real_open = os.open
-    real_write = os.write
-
-    def mock_open(path, flags, *args):
-        if isinstance(path, str) and path == "/dev/tty":
-            return 99
-        return real_open(path, flags, *args)
-
-    def mock_write(fd, data):
-        if fd == 99:
-            written.extend(data)
-            return len(data)
-        return real_write(fd, data)
-
-    monkeypatch.setattr(os, "open", mock_open)
-    monkeypatch.setattr(os, "write", mock_write)
-    return written
+import kon.notify as mod
+from kon.notify import notify
 
 
-def test_notify_emits_bell(monkeypatch):
-    written = _capture_raw_write(monkeypatch)
-    notify("kon", "Task complete")
-    assert written.decode() == "\a"
+def test_notify_plays_macos_sound(monkeypatch):
+    commands: list[list[str]] = []
+
+    monkeypatch.setattr(mod, "_platform", lambda: "darwin")
+    monkeypatch.setattr(mod, "_sound_path", lambda event: Path(f"/sounds/{event}.mp3"))
+    monkeypatch.setattr(mod, "_run", commands.append)
+
+    notify("completion")
+
+    assert commands == [["afplay", "/sounds/completion.mp3"]]
 
 
-def test_bell_debounces(monkeypatch):
-    import kon.notify as mod
+def test_notify_plays_linux_sound_with_cached_player(monkeypatch):
+    commands: list[list[str]] = []
 
-    written = _capture_raw_write(monkeypatch)
+    monkeypatch.setattr(mod, "_platform", lambda: "linux")
+    monkeypatch.setattr(mod, "_sound_path", lambda event: Path(f"/sounds/{event}.mp3"))
+    monkeypatch.setattr(mod, "_linux_player", lambda: "mpv")
+    monkeypatch.setattr(mod, "_run", commands.append)
 
-    mod._last_bell_time = time.monotonic()
-    _bell()
-    assert "\a" not in written.decode()
+    notify("permission")
 
-    mod._last_bell_time = 0.0
-    _bell()
-    assert "\a" in written.decode()
+    assert commands == [
+        [
+            "mpv",
+            "--no-video",
+            "--no-terminal",
+            "--script-opts=autoload-disabled=yes",
+            "/sounds/permission.mp3",
+        ]
+    ]
+
+
+def test_notify_ignores_unsupported_platform(monkeypatch):
+    commands: list[list[str]] = []
+
+    monkeypatch.setattr(mod, "_platform", lambda: "windows")
+    monkeypatch.setattr(mod, "_sound_path", lambda event: Path(f"/sounds/{event}.mp3"))
+    monkeypatch.setattr(mod, "_run", commands.append)
+
+    notify("error")
+
+    assert commands == []
+
+
+def test_linux_player_prefers_paplay(monkeypatch):
+    mod._linux_player.cache_clear()
+    monkeypatch.setattr(
+        mod.shutil, "which", lambda command: command if command == "paplay" else None
+    )
+
+    assert mod._linux_player() == "paplay"
+
+    mod._linux_player.cache_clear()
+
+
+def test_linux_player_falls_back_to_aplay(monkeypatch):
+    mod._linux_player.cache_clear()
+    monkeypatch.setattr(
+        mod.shutil, "which", lambda command: command if command == "aplay" else None
+    )
+
+    assert mod._linux_player() == "aplay"
+
+    mod._linux_player.cache_clear()

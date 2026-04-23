@@ -75,6 +75,6 @@ collapse_thinking = true
 mode = "prompt" # "prompt" or "auto"
 
 [notifications]
-# Ring the terminal bell when kon finishes a task or waits for tool approval.
+# Play audio when kon finishes a task, hits an error, or waits for tool approval.
 # Disabled by default.
 enabled = false
