@@ -276,7 +276,8 @@ class ChatLog(VerticalScroll):
     def add_user_message(self, content: str, highlighted_skill: str | None = None) -> UserBlock:
         block = UserBlock(content, highlighted_skill=highlighted_skill)
         self.mount(block)
-        self._scroll_if_anchored(animate=False)
+        self._anchor_released = False
+        self.scroll_end(animate=False)
         self._prune_if_needed()
         return block
 
