@@ -31,7 +31,7 @@ class CopilotAnthropicProvider(AnthropicProvider):
     """
 
     name = "github-copilot-anthropic"
-    thinking_levels: list[str] = ["none", "minimal", "low", "medium", "high", "xhigh"]  # noqa: RUF012
+    thinking_levels: list[str] = ["none", "low", "medium", "high", "xhigh"]  # noqa: RUF012
 
     def __init__(self, config: ProviderConfig):
         # Skip AnthropicProvider.__init__ since we need custom client setup

@@ -72,7 +72,7 @@ def supports_adaptive_thinking(model_id: str) -> bool:
 
 class AnthropicProvider(BaseProvider):
     name = "anthropic"
-    thinking_levels: list[str] = ["none", "minimal", "low", "medium", "high", "xhigh"]  # noqa: RUF012
+    thinking_levels: list[str] = ["none", "low", "medium", "high", "xhigh"]  # noqa: RUF012
 
     def __init__(self, config: ProviderConfig):
         super().__init__(config)
