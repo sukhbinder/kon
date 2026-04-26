@@ -1087,6 +1087,9 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
 
     def _handle_shell_command(self, display_text: str, original_text: str) -> None:
         """Handle shell commands prefixed with ! or !!"""
+        if self._is_running:
+            return
+
         chat = self.query_one("#chat-log", ChatLog)
 
         # Determine if we should send output to LLM
@@ -1101,6 +1104,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         chat.add_user_message(display_text)
 
         # Execute the command
+        self._is_running = True
         self.run_worker(self._execute_shell_command(command_text, send_to_llm), exclusive=True)
 
     async def _execute_shell_command(self, command: str, send_to_llm: bool) -> None:
@@ -1152,6 +1156,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
         except Exception as e:
             chat.add_info_message(f"Error executing command: {e}", error=True)
         finally:
+            self._is_running = False
             status.set_status("idle")
 
 
