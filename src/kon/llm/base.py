@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 from ..core.types import Message, StreamPart, ToolDefinition, Usage
 
-DEFAULT_THINKING_LEVELS: list[str] = ["none", "low", "medium", "high", "xhigh"]
+DEFAULT_THINKING_LEVELS: list[str] = ["none", "minimal", "low", "medium", "high", "xhigh"]
 LOCAL_API_KEY_PLACEHOLDER = "kon-local"
 AuthMode = Literal["auto", "required", "none"]
 

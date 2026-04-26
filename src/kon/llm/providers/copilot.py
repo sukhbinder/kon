@@ -26,7 +26,7 @@ class CopilotProvider(OpenAICompletionsProvider):
     """
 
     name = "github-copilot"
-    thinking_levels: list[str] = ["none", "low", "medium", "high", "xhigh"]  # noqa: RUF012
+    thinking_levels: list[str] = ["none", "minimal", "low", "medium", "high", "xhigh"]  # noqa: RUF012
     # Copilot doesn't accept reasoning_effort - thinking is enabled server-side
     supports_reasoning_effort: bool = False
     # Copilot requires assistant content as string, not array.

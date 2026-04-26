@@ -78,7 +78,7 @@ def _detect_compat(provider: str, base_url: str, model: str = "") -> OpenAICompl
 
 class OpenAICompletionsProvider(BaseProvider):
     name = "openai"
-    thinking_levels: list[str] = ["none", "low", "medium", "high", "xhigh"]  # noqa: RUF012
+    thinking_levels: list[str] = ["none", "minimal", "low", "medium", "high", "xhigh"]  # noqa: RUF012
     # Whether to send reasoning_effort param. Some providers (e.g. Copilot)
     # enable thinking server-side and don't accept this parameter.
     supports_reasoning_effort: bool = True

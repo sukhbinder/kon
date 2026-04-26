@@ -54,7 +54,7 @@ class FakeInputBox:
 
 class FakeProvider:
     name = "fake"
-    thinking_levels: ClassVar[list[str]] = ["none", "low", "medium", "high", "xhigh"]
+    thinking_levels: ClassVar[list[str]] = ["none", "minimal", "low", "medium", "high", "xhigh"]
 
     def __init__(self) -> None:
         self.thinking_level = "low"
@@ -125,6 +125,7 @@ def test_thinking_command_without_argument_opens_picker():
     assert fake.completion_list.searchable is True
     assert [(item.value, item.label, item.description) for item in fake.completion_list.items] == [
         ("none", "none", "current session only"),
+        ("minimal", "minimal", "current session only"),
         ("low", "low ✓", "current session only"),
         ("medium", "medium", "current session only"),
         ("high", "high", "current session only"),

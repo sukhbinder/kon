@@ -227,7 +227,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
 
     def _apply_thinking_level_style(self, level: str) -> None:
         input_box = self.query_one("#input-box", InputBox)
-        for name in ("none", "low", "medium", "high", "xhigh"):
+        for name in ("none", "minimal", "low", "medium", "high", "xhigh"):
             input_box.remove_class(self._thinking_level_class(name))
         input_box.add_class(self._thinking_level_class(level))
 

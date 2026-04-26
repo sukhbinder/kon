@@ -231,6 +231,7 @@ Screen {{
 }}
 
 #input-box.-thinking-none,
+#input-box.-thinking-minimal,
 #input-box.-thinking-low {{
     border-top: solid {colors.border};
     border-bottom: solid {colors.border};
