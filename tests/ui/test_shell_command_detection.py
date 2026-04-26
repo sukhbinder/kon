@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from kon.tools.bash import BashParams, BashTool
+from kon.tools.bash import BashTool
 from kon.ui.app import Kon
 
 

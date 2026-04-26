@@ -1125,10 +1125,15 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
             # Create bash tool instance
             bash_tool = BashTool()
 
+            # Create cancellation event for this command
+            cancel_event = asyncio.Event()
+            self._cancel_event = cancel_event
+
             # Execute the command
             status.set_status("running")
             result = await bash_tool.execute(
-                BashParams(command=command, show_full_output=show_full_output)
+                BashParams(command=command, show_full_output=show_full_output),
+                cancel_event=cancel_event,
             )
 
             # Start tool block
@@ -1168,6 +1173,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
             chat.add_info_message(f"Error executing command: {e}", error=True)
         finally:
             self._is_running = False
+            self._cancel_event = None
             status.set_status("idle")
 
 
