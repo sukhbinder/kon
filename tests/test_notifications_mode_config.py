@@ -1,16 +1,16 @@
 from pathlib import Path
 
-from kon import get_config, reset_config, set_notifications_enabled
+from kon import get_config, reset_config, set_notifications_mode
 from kon.config import NOTIFICATION_MODES
 
 
-def test_set_notifications_enabled_persists_and_updates_runtime_config(tmp_path, monkeypatch):
+def test_set_notifications_mode_persists_and_updates_runtime_config(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     reset_config()
 
     try:
         original_config = get_config()
-        cfg = set_notifications_enabled(True)
+        cfg = set_notifications_mode("on")
 
         config_file = Path(tmp_path) / ".kon" / "config.toml"
         assert cfg is original_config

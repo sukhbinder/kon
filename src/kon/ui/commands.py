@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from kon import config, set_notifications_enabled, set_permission_mode, set_theme
+from kon import config, set_notifications_mode, set_permission_mode, set_theme
 from kon.config import NOTIFICATION_MODES, PERMISSION_MODES, NotificationMode, PermissionMode
 
 from ..core.compaction import generate_summary
@@ -343,14 +343,13 @@ Extra tools:
             if requested in NOTIFICATION_MODES:
                 self._select_notifications_mode(requested)
             else:
-                valid_modes = ", ".join(NOTIFICATION_MODES)
+                valid = ", ".join(NOTIFICATION_MODES)
                 chat.add_info_message(
-                    f"Invalid notifications mode: {requested}. Use one of: {valid_modes}",
-                    error=True,
+                    f"Invalid notifications mode: {requested}. Use one of: {valid}", error=True
                 )
             return
 
-        current_mode: NotificationMode = "on" if config.notifications.enabled else "off"
+        current: NotificationMode = "on" if config.notifications.enabled else "off"
         descriptions: dict[NotificationMode, str] = {
             "on": "play notification sounds",
             "off": "disable notification sounds",
@@ -358,7 +357,7 @@ Extra tools:
         items = [
             ListItem(
                 value=mode,
-                label=f"{mode} ✓" if mode == current_mode else mode,
+                label=f"{mode} ✓" if mode == current else mode,
                 description=descriptions[mode],
             )
             for mode in NOTIFICATION_MODES
@@ -375,7 +374,7 @@ Extra tools:
         self._selection_mode = SelectionMode.NOTIFICATIONS
 
     def _select_notifications_mode(self, mode: NotificationMode) -> None:
-        set_notifications_enabled(mode == "on")
+        set_notifications_mode(mode)
         chat = self.query_one("#chat-log", ChatLog)
         chat.show_status(f"Notifications turned {mode} and saved")
 

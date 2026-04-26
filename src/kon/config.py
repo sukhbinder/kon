@@ -557,9 +557,12 @@ def set_permission_mode(mode: PermissionMode) -> Config:
     return current_config
 
 
-def set_notifications_enabled(enabled: bool) -> Config:
+def set_notifications_mode(mode: NotificationMode) -> Config:
+    if mode not in NOTIFICATION_MODES:
+        raise ValueError(f"Unknown notifications mode: {mode}")
+
     current_config = get_config()
-    current_config._parsed.notifications.enabled = enabled
+    current_config._parsed.notifications.enabled = mode == "on"
 
     config_file = _ensure_config_file()
     data = _read_config_data(config_file)
@@ -569,7 +572,7 @@ def set_notifications_enabled(enabled: bool) -> Config:
         notifications = {}
         data["notifications"] = notifications
 
-    notifications["enabled"] = enabled
+    notifications["enabled"] = mode == "on"
     _set_config_version(data)
 
     _atomic_write_text(config_file, _serialize_config_toml(data))
