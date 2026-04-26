@@ -38,7 +38,7 @@ def _is_retryable_status(status: int) -> bool:
 
 class OpenAICodexResponsesProvider(BaseProvider):
     name = "openai-codex"
-    thinking_levels: list[str] = ["none", "low", "medium", "high", "xhigh"]  # noqa: RUF012
+    thinking_levels: list[str] = ["none", "minimal", "low", "medium", "high", "xhigh"]  # noqa: RUF012
 
     def __init__(self, config: ProviderConfig):
         super().__init__(config)

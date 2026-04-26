@@ -40,7 +40,7 @@ COPILOT_HEADERS = {
 
 class OpenAIResponsesProvider(BaseProvider):
     name = "openai-responses"
-    thinking_levels: list[str] = ["none", "low", "medium", "high", "xhigh"]  # noqa: RUF012
+    thinking_levels: list[str] = ["none", "minimal", "low", "medium", "high", "xhigh"]  # noqa: RUF012
 
     def __init__(self, config: ProviderConfig, headers: dict[str, str] | None = None):
         super().__init__(config)
