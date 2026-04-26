@@ -188,8 +188,8 @@ class InfoBar(Vertical):
             yield Label(self._format_row1_left(), id="info-cwd")
             yield Label(self._format_row1_right(), id="info-row1-right")
         with Horizontal(id="info-row-2"):
-            yield Label(self._format_row2_right(), id="info-row2-left")
-            yield Label(self._format_row2_left(), id="info-row2-right")
+            yield Label(self._format_row2_left(), id="info-row2-left")
+            yield Label(self._format_row2_right(), id="info-row2-right")
 
     def _format_row1_left(self) -> Text:
         result = Text(self._cwd)
@@ -227,22 +227,6 @@ class InfoBar(Vertical):
         return result
 
     def _format_row2_left(self) -> Text:
-        model_text = self._model
-        if self._model_provider:
-            model_text = f"{self._model} ({self._model_provider})"
-        result = Text(model_text)
-        result.append(f" • {self._thinking_level}")
-        return result
-
-    def _format_permission_mode(self) -> Text:
-        result = Text()
-        if self._permission_mode == "auto":
-            result.append("✓✓ auto", style=config.ui.colors.badge.label)
-        else:
-            result.append("⏸ prompt", style=config.ui.colors.notice)
-        return result
-
-    def _format_row2_right(self) -> Text:
         result = self._format_permission_mode()
         self._file_changes_text_start = None
         if not self._file_changes:
@@ -256,6 +240,22 @@ class InfoBar(Vertical):
         result.append(f"{n_files} file{'s' if n_files != 1 else ''}")
         result.append(f" +{total_added}", style=config.ui.colors.diff_added)
         result.append(f" -{total_removed}", style=config.ui.colors.diff_removed)
+        return result
+
+    def _format_permission_mode(self) -> Text:
+        result = Text()
+        if self._permission_mode == "auto":
+            result.append("✓✓ auto", style=config.ui.colors.badge.label)
+        else:
+            result.append("⏸ prompt", style=config.ui.colors.notice)
+        return result
+
+    def _format_row2_right(self) -> Text:
+        model_text = self._model
+        if self._model_provider:
+            model_text = f"{self._model} ({self._model_provider})"
+        result = Text(model_text)
+        result.append(f" • {self._thinking_level}")
         return result
 
     def update_tokens(
@@ -293,27 +293,27 @@ class InfoBar(Vertical):
     def set_model(self, model: str, provider: str | None = None) -> None:
         self._model = model
         self._model_provider = provider
-        self._label_row2_right.update(self._format_row2_left())
+        self._label_row2_right.update(self._format_row2_right())
 
     def set_thinking_level(self, thinking_level: str) -> None:
         self._thinking_level = thinking_level
-        self._label_row2_right.update(self._format_row2_left())
+        self._label_row2_right.update(self._format_row2_right())
 
     def set_thinking_visibility(self, hide_thinking: bool) -> None:
         self._hide_thinking = hide_thinking
 
     def set_permission_mode(self, mode: PermissionMode) -> None:
         self._permission_mode = mode
-        self._label_row2_left.update(self._format_row2_right(), layout=False)
+        self._label_row2_left.update(self._format_row2_left(), layout=False)
 
     def update_file_changes(self, path: str, added: int, removed: int) -> None:
         prev_added, prev_removed = self._file_changes.get(path, (0, 0))
         self._file_changes[path] = (prev_added + added, prev_removed + removed)
-        self._label_row2_left.update(self._format_row2_right(), layout=False)
+        self._label_row2_left.update(self._format_row2_left(), layout=False)
 
     def set_file_changes(self, file_changes: dict[str, tuple[int, int]]) -> None:
         self._file_changes = file_changes
-        self._label_row2_left.update(self._format_row2_right(), layout=False)
+        self._label_row2_left.update(self._format_row2_left(), layout=False)
 
     def _is_file_changes_click(self, widget: object, x: int) -> bool:
         return (

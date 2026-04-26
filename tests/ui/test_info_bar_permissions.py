@@ -20,7 +20,7 @@ def test_info_bar_shows_auto_permission_mode_before_file_changes():
         info_bar = InfoBar("/tmp", "model")
         info_bar._file_changes = {"a.txt": (2, 1)}
 
-        rendered = info_bar._format_row2_right()
+        rendered = info_bar._format_row2_left()
     finally:
         reset_config()
 
@@ -33,7 +33,7 @@ def test_info_bar_shows_prompt_permission_mode_without_file_changes():
     try:
         info_bar = InfoBar("/tmp", "model")
 
-        rendered = info_bar._format_row2_right()
+        rendered = info_bar._format_row2_left()
     finally:
         reset_config()
 
