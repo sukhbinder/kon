@@ -54,7 +54,9 @@ class Kon(TextArea):
 
     async def _on_key(self, event: events.Key) -> None:
         future = getattr(self.app, "_approval_future", None)
-        approval_keys = ("y", "Y", "n", "N", "left", "right", "enter")
+        approval_keys = ("y", "Y", "n", "N")
+        if not self.text:
+            approval_keys += ("left", "right", "enter")
         if future and not future.done() and event.key in approval_keys:
             app_on_key = getattr(self.app, "on_key", None)
             if callable(app_on_key):
