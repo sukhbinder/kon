@@ -297,9 +297,7 @@ class ToolBlock(Static):
             self.add_class("-error")
 
     def show_approval(
-        self,
-        preview: str | None = None,
-        selected: ApprovalResponse | None = None,
+        self, preview: str | None = None, selected: ApprovalResponse | None = None
     ) -> None:
         self._awaiting_approval = True
         self._approval_preview = preview
