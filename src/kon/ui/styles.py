@@ -252,6 +252,15 @@ Screen {{
     border-bottom: solid {colors.badge.label};
 }}
 
+#input-box.-shell-command {{
+    border-top: solid {colors.success};
+    border-bottom: solid {colors.success};
+}}
+
+#input-box.-shell-command .input-textarea {{
+    color: {colors.success};
+}}
+
 /* Completion list - between input and info bar */
 #completion-list {{
     height: auto;

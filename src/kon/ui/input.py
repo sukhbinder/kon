@@ -39,6 +39,7 @@ _PASTE_LINE_THRESHOLD = 5
 _PASTE_CHAR_THRESHOLD = 500
 _PASTE_MARKER_RE = re.compile(r"\[paste #(\d+)(?: (\+\d+ lines|\d+ chars))?\]")
 _SKILL_TRIGGER_MARKER = "\u2063"
+_SHELL_COMMAND_CLASS = "-shell-command"
 
 
 class Kon(TextArea):
@@ -202,6 +203,7 @@ class InputBox(Vertical):
         self._selected_skill_commands.clear()
         self.border_title = ""
         self.border_subtitle = ""
+        self._sync_shell_command_style()
         if reset_pastes:
             self._reset_pastes()
 
@@ -293,6 +295,8 @@ class InputBox(Vertical):
             self._suppress_autocomplete -= 1
             return
 
+        self._sync_shell_command_style()
+
         if not self._autocomplete_enabled:
             # When completing with autocomplete disabled (selection mode),
             # route text to the floating list search
@@ -310,6 +314,12 @@ class InputBox(Vertical):
         clamped_row = min(row, len(lines) - 1)
         prefix_len = sum(len(line) + 1 for line in lines[:clamped_row])
         return prefix_len + max(0, min(col, len(lines[clamped_row])))
+
+    def _sync_shell_command_style(self) -> None:
+        if self.text.strip().startswith("!"):
+            self.add_class(_SHELL_COMMAND_CLASS)
+        else:
+            self.remove_class(_SHELL_COMMAND_CLASS)
 
     def _try_autocomplete(self) -> None:
         textarea = self.query_one("#input-textarea", TextArea)
