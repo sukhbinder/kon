@@ -557,50 +557,6 @@ def set_theme(theme: str) -> Config:
     return reload_config()
 
 
-def set_permission_mode(mode: PermissionMode) -> Config:
-    if mode not in PERMISSION_MODES:
-        raise ValueError(f"Unknown permission mode: {mode}")
-
-    current_config = get_config()
-    current_config._parsed.permissions.mode = mode
-
-    config_file = _ensure_config_file()
-    data = _read_config_data(config_file)
-
-    permissions = data.get("permissions")
-    if not isinstance(permissions, dict):
-        permissions = {}
-        data["permissions"] = permissions
-
-    permissions["mode"] = mode
-    _set_config_version(data)
-
-    _atomic_write_text(config_file, _serialize_config_toml(data))
-    return current_config
-
-
-def set_notifications_mode(mode: NotificationMode) -> Config:
-    if mode not in NOTIFICATION_MODES:
-        raise ValueError(f"Unknown notifications mode: {mode}")
-
-    current_config = get_config()
-    current_config._parsed.notifications.enabled = mode == "on"
-
-    config_file = _ensure_config_file()
-    data = _read_config_data(config_file)
-
-    notifications = data.get("notifications")
-    if not isinstance(notifications, dict):
-        notifications = {}
-        data["notifications"] = notifications
-
-    notifications["enabled"] = mode == "on"
-    _set_config_version(data)
-
-    _atomic_write_text(config_file, _serialize_config_toml(data))
-    return current_config
-
-
 def reset_config() -> None:
     """Reset config to uninitialized state (next get_config() will reload from file)."""
     _config_var.set(None)
