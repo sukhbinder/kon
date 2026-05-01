@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
-from kon import config, set_notifications_mode, set_permission_mode, set_theme
+from kon import config, set_theme
 from kon.config import NOTIFICATION_MODES, PERMISSION_MODES, NotificationMode, PermissionMode
 
 from ..llm import (
@@ -289,11 +289,11 @@ Extra tools:
         )
 
     def _select_permission_mode(self, mode: PermissionMode) -> None:
-        set_permission_mode(mode)
+        config.permissions.mode = mode
         info_bar = self.query_one("#info-bar", InfoBar)
         info_bar.set_permission_mode(mode)
         chat = self.query_one("#chat-log", ChatLog)
-        chat.show_status(f"Permission mode changed to {mode} and saved")
+        chat.show_status(f"Permission mode changed to {mode}")
 
     def _handle_thinking_command(self, args: str) -> None:
         chat = self.query_one("#chat-log", ChatLog)
@@ -353,9 +353,9 @@ Extra tools:
         )
 
     def _select_notifications_mode(self, mode: NotificationMode) -> None:
-        set_notifications_mode(mode)
+        config.notifications.enabled = mode == "on"
         chat = self.query_one("#chat-log", ChatLog)
-        chat.show_status(f"Notifications turned {mode} and saved")
+        chat.show_status(f"Notifications turned {mode}")
 
     def _select_theme(self, theme_id: str) -> None:
         set_theme(theme_id)

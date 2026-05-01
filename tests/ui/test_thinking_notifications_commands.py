@@ -1,7 +1,6 @@
-from pathlib import Path
 from typing import Any, ClassVar, cast
 
-from kon import reset_config
+from kon import config, reset_config
 from kon.runtime import ConversationRuntime
 from kon.ui.commands import CommandsMixin
 from kon.ui.floating_list import ListItem
@@ -150,19 +149,17 @@ def test_thinking_command_without_argument_opens_picker():
     ]
 
 
-def test_notifications_command_with_argument_updates_runtime_and_persists(tmp_path, monkeypatch):
+def test_notifications_command_with_argument_is_session_scoped(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     reset_config()
     fake = FakeCommands()
 
     try:
         fake._handle_notifications_command("on")
+        assert fake.chat.statuses == ["Notifications turned on"]
+        assert config.notifications.enabled is True
     finally:
         reset_config()
-
-    config_file = Path(tmp_path) / ".kon" / "config.toml"
-    assert fake.chat.statuses == ["Notifications turned on and saved"]
-    assert "enabled = true" in config_file.read_text(encoding="utf-8")
 
 
 def test_notifications_command_without_argument_opens_picker(tmp_path, monkeypatch):

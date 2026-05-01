@@ -1,6 +1,5 @@
-from pathlib import Path
-
-from kon import reset_config
+from kon import config, reset_config
+from kon.config import _read_config_data
 from kon.ui.commands import CommandsMixin
 
 
@@ -33,17 +32,22 @@ class FakeCommands(CommandsMixin):
         raise AssertionError(f"Unexpected selector: {selector}")
 
 
-def test_select_permission_mode_uses_reusable_status(tmp_path, monkeypatch):
+def test_select_permission_mode_is_session_scoped(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     reset_config()
     fake = FakeCommands()
 
     try:
         fake._select_permission_mode("auto")
+
+        assert fake.info_bar.permission_modes == ["auto"]
+        assert fake.chat.statuses == ["Permission mode changed to auto"]
+        assert config.permissions.mode == "auto"
+
+        config_file = tmp_path / ".kon" / "config.toml"
+        if config_file.exists():
+            data = _read_config_data(config_file)
+            perms = data.get("permissions", {})
+            assert perms.get("mode", "prompt") == "prompt"
     finally:
         reset_config()
-
-    config_file = Path(tmp_path) / ".kon" / "config.toml"
-    assert fake.info_bar.permission_modes == ["auto"]
-    assert fake.chat.statuses == ["Permission mode changed to auto and saved"]
-    assert 'mode = "auto"' in config_file.read_text(encoding="utf-8")
