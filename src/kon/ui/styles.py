@@ -97,8 +97,8 @@ Screen {{
 .launch-warnings-block {{
     padding: 0 1;
     margin: 1 0 0 0;
-    border-top: solid yellow;
-    border-bottom: solid yellow;
+    border-top: solid {colors.notice};
+    border-bottom: solid {colors.notice};
 }}
 
 /* Session info */
