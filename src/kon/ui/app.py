@@ -368,7 +368,8 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
                 context_paths=[
                     format_path(f.path) for f in self._runtime.agent.context.agents_files
                 ],
-                skill_paths=[format_path(s.path) for s in self._runtime.agent.context.skills],
+                skills=self._runtime.agent.context.skills,
+                tools=self._runtime.tools,
             )
             for path, message in self._runtime.agent.context.skill_warnings:
                 self._add_launch_warning(f"Skill warning in {format_path(path)}: {message}")
@@ -1145,7 +1146,7 @@ class Kon(CommandsMixin, SessionUIMixin, App[None]):
             status.set_status("idle")
 
 
-_LOGO = ["█ K █", "█ O █", "█ N █"]
+_LOGO = ["░█░█░█▀█░█▀█", "░█▀▄░█░█░█░█", "░▀░▀░▀▀▀░▀░▀"]
 
 
 def _format_duration(seconds: float) -> str:
