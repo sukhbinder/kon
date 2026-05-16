@@ -194,7 +194,12 @@ class ToolBlock(Static):
     MAX_HEADER_LINES = 2
 
     def __init__(
-        self, name: str = "", call_msg: str | None = None, icon: str = "→", **kwargs
+        self,
+        name: str = "",
+        call_msg: str | None = None,
+        icon: str = "→",
+        expanded: bool = False,
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self._name = name
@@ -204,7 +209,7 @@ class ToolBlock(Static):
         self._ui_details: str | None = None
         self._ui_details_full: str | None = None
         self._result_markup: bool = True
-        self._expanded: bool = False
+        self._expanded: bool = expanded
         self._success: bool | None = None
         self._awaiting_approval: bool = False
         self._approval_preview: str | None = None

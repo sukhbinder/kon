@@ -444,8 +444,9 @@ class ChatLog(VerticalScroll):
     def start_tool(
         self, name: str, tool_id: str, call_msg: str | None = None, icon: str = "→"
     ) -> ToolBlock:
-        block = ToolBlock(name=name, call_msg=call_msg, icon=icon)
-        block.set_expanded(self._tool_output_expanded)
+        block = ToolBlock(
+            name=name, call_msg=call_msg, icon=icon, expanded=self._tool_output_expanded
+        )
 
         # Consecutive tool calls without detail output render compactly (no
         # margin). Tools with detail output (diffs, bash output, etc.) always

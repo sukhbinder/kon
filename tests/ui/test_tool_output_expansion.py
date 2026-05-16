@@ -1,8 +1,16 @@
+import pytest
 from rich.text import Text
+from textual.app import App, ComposeResult
+from textual.widgets import Label
 
 from kon.ui.blocks import ToolBlock
 from kon.ui.chat import ChatLog
 from kon.ui.tool_output import format_expand_hint, truncate_tool_output_text
+
+
+class ToolExpansionTestApp(App):
+    def compose(self) -> ComposeResult:
+        yield ChatLog(id="chat-log")
 
 
 def test_format_expand_hint_styles_ctrl_o_differently():
@@ -44,3 +52,16 @@ def test_chat_log_toggles_all_tool_blocks(monkeypatch):
 
     assert chat.toggle_tool_output_expanded() is False
     assert seen == {"a": False, "b": False}
+
+
+@pytest.mark.asyncio
+async def test_start_tool_uses_expanded_state_before_mount():
+    async with ToolExpansionTestApp().run_test() as pilot:
+        chat = pilot.app.query_one("#chat-log", ChatLog)
+        chat.set_tool_output_expanded(True)
+
+        block = chat.start_tool("bash", "tool-1")
+        await pilot.pause()
+
+        assert block._expanded is True
+        assert block.query_one("#tool-output", Label)
