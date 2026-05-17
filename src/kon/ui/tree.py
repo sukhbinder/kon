@@ -339,7 +339,7 @@ class TreeSelector(Widget):
             entry = flat.node.entry
             selected = index == self._selected_index
             line = Text(" ")
-            line.append("›", style=colors.accent) if selected else line.append(" ")  # noqa: RUF001
+            line.append("❯", style=colors.accent) if selected else line.append(" ")
             display_indent = max(0, flat.indent - 1) if self._multiple_roots else flat.indent
             connector = (
                 "└─ "
