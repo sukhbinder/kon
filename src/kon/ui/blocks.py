@@ -8,7 +8,6 @@ from textual import events
 from textual.app import ComposeResult
 from textual.message import Message
 from textual.widgets import Label, Static
-from textual_image.widget import Image as TextualImage
 
 from kon import config
 from kon.core.types import ImageContent
@@ -492,6 +491,8 @@ class ToolBlock(Static):
         if not self._images:
             container.add_class("-hidden")
             return
+
+        from textual_image.widget import Image as TextualImage
 
         self.remove_class("-compact")
         self.add_class("-with-details")
