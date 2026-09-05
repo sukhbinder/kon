@@ -9,6 +9,7 @@ PROVIDER_API_BY_NAME: dict[str, ApiType] = {
     "openai-responses": ApiType.OPENAI_RESPONSES,
     "openai-codex": ApiType.OPENAI_CODEX_RESPONSES,
     "azure-ai-foundry": ApiType.AZURE_AI_FOUNDRY,
+    "openrouter": ApiType.OPENROUTER,
 }
 
 
@@ -54,6 +55,10 @@ def get_provider_class(api_type: ApiType) -> type[BaseProvider]:
             from .openai_completions import OpenAICompletionsProvider
 
             return OpenAICompletionsProvider
+        case ApiType.OPENROUTER:
+            from .openrouter import OpenRouterProvider
+
+            return OpenRouterProvider
 
     raise ValueError(f"Unsupported API type: {api_type.value}")
 
